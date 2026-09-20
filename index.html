@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <meta
+    name="theme-color"
+    content="#07111f"
+  >
+
+  <meta
+    name="description"
+    content="ÚtilHub V14 — herramientas útiles para tu día a día."
+  >
+
+  <title>ÚtilHub V14 — SUPRIME-MASTER-NOVA</title>
+
+  <!-- PWA -->
+  <link
+    rel="manifest"
+    href="manifest.webmanifest"
+  >
+
+  <!-- Icono UH -->
+  <link
+    rel="icon"
+    href="icon.svg"
+    type="image/svg+xml"
+  >
+
+  <!-- Estilos -->
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+</head>
+
+<body>
+
+  <!-- =====================================================
+       FONDO NOVA
+       ===================================================== -->
+
+  <div
+    id="nova-bg"
+    aria-hidden="true"
+  ></div>
+
+
+  <!-- =====================================================
+       BARRA SUPERIOR
+       ===================================================== -->
+
+  <header class="topbar">
+
+    <a
+      class="brand"
+      href="#inicio"
+      aria-label="Ir al inicio de ÚtilHub"
+    >
+
+      <span class="brand-icon">
+        UH
+      </span>
+
+      <span>
+        <b>ÚtilHub</b>
+
+        <small>
+          V14 · SUPRIME-MASTER-NOVA
+        </small>
+      </span>
+
+    </a>
+
+
+    <nav>
+
+      <a href="#herramientas">
+        Herramientas
+      </a>
+
+      <a href="#organiza">
+        Organiza
+      </a>
+
+      <a href="#explora">
+        Explora
+      </a>
+
+      <button
+        id="themeBtn"
+        class="icon-btn"
+        type="button"
+        title="Cambiar tema"
+      >
+        ☾
+      </button>
+
+      <button
+        id="installBtn"
+        class="install-btn"
+        type="button"
+        hidden
+      >
+        Instalar
+      </button>
+
+    </nav>
+
+  </header>
+
+
+  <!-- =====================================================
+       CONTENIDO PRINCIPAL
+       ===================================================== -->
+
+  <main id="inicio">
+
+
+    <!-- ===================================================
+         HERO
+         =================================================== -->
+
+    <section class="hero">
+
+      <div class="hero-copy">
+
+        <p class="eyebrow">
+          NOVA FLOW 4.0 · V14
+        </p>
+
+        <h1>
+          Todo lo útil,
+          <br>
+          <span>en un solo lugar.</span>
+        </h1>
+
+        <p class="hero-text">
+          Calcula, convierte, organiza, crea y busca
+          herramientas prácticas sin cuentas ni backend.
+        </p>
+
+
+        <div class="hero-actions">
+
+          <a
+            class="primary"
+            href="#herramientas"
+          >
+            Explorar herramientas
+          </a>
+
+          <button
+            class="secondary"
+            id="quickRandom"
+            type="button"
+          >
+            Sorpréndeme
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- NÚCLEO NOVA -->
+
+      <div
+        class="nova-core"
+        aria-hidden="true"
+      >
+
+        <div class="ring r1"></div>
+
+        <div class="ring r2"></div>
+
+        <div class="ring r3"></div>
+
+        <div class="core">
+          UH
+        </div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ===================================================
+         BUSCADOR
+         =================================================== -->
+
+    <section
+      class="search-panel"
+      aria-label="Buscador de herramientas"
+    >
+
+      <label for="globalSearch">
+        ⌕ Buscar una herramienta
+      </label>
+
+      <input
+        id="globalSearch"
+        type="search"
+        placeholder="Ej.: porcentaje, QR, notas, cronómetro..."
+        autocomplete="off"
+      >
+
+      <div
+        id="searchResults"
+        class="search-results"
+      ></div>
+
+    </section>
+
+
+
+    <!-- ===================================================
+         ESTADÍSTICAS
+         =================================================== -->
+
+    <section class="stats">
+
+      <div>
+
+        <strong id="toolCount">
+          0
+        </strong>
+
+        <span>
+          herramientas
+        </span>
+
+      </div>
+
+
+      <div>
+
+        <strong id="favCount">
+          0
+        </strong>
+
+        <span>
+          favoritos
+        </span>
+
+      </div>
+
+
+      <div>
+
+        <strong id="recentCount">
+          0
+        </strong>
+
+        <span>
+          recientes
+        </span>
+
+      </div>
+
+
+      <div>
+
+        <strong id="onlineStatus">
+          ●
+        </strong>
+
+        <span>
+          conexión
+        </span>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ===================================================
+         HERRAMIENTAS
+         =================================================== -->
+
+    <section
+      id="herramientas"
+      class="section"
+    >
+
+      <div class="section-title">
+
+        <div>
+
+          <p class="eyebrow">
+            NÚCLEO ÚTIL
+          </p>
+
+          <h2>
+            Herramientas
+          </h2>
+
+        </div>
+
+
+        <div
+          class="filters"
+          id="filters"
+        ></div>
+
+      </div>
+
+
+      <div
+        id="toolGrid"
+        class="tool-grid"
+      ></div>
+
+    </section>
+
+
+
+    <!-- ===================================================
+         ORGANIZACIÓN
+         =================================================== -->
+
+    <section
+      id="organiza"
+      class="section"
+    >
+
+      <div class="section-title">
+
+        <div>
+
+          <p class="eyebrow">
+            PRODUCTIVIDAD
+          </p>
+
+          <h2>
+            Organiza tu día
+          </h2>
+
+        </div>
+
+      </div>
+
+
+      <div class="action-grid">
+
+
+        <button
+          class="action-card"
+          data-tool="notes"
+        >
+
+          <b>
+            📝 Notas
+          </b>
+
+          <span>
+            Guarda ideas y apuntes.
+          </span>
+
+        </button>
+
+
+
+        <button
+          class="action-card"
+          data-tool="tasks"
+        >
+
+          <b>
+            ✅ Tareas
+          </b>
+
+          <span>
+            Controla lo que tienes pendiente.
+          </span>
+
+        </button>
+
+
+
+        <button
+          class="action-card"
+          data-tool="shopping"
+        >
+
+          <b>
+            🛒 Compras
+          </b>
+
+          <span>
+            Crea tu lista de compras.
+          </span>
+
+        </button>
+
+
+
+        <button
+          class="action-card"
+          data-tool="study"
+        >
+
+          <b>
+            📚 Estudio
+          </b>
+
+          <span>
+            Organiza materias y sesiones.
+          </span>
+
+        </button>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ===================================================
+         EXPLORA
+         =================================================== -->
+
+    <section
+      id="explora"
+      class="section"
+    >
+
+      <div class="section-title">
+
+        <div>
+
+          <p class="eyebrow">
+            MUNDO EXTERIOR
+          </p>
+
+          <h2>
+            Explora
+          </h2>
+
+        </div>
+
+      </div>
+
+
+      <div class="external-grid">
+
+
+        <a
+          class="external-card"
+          target="_blank"
+          rel="noopener"
+          href="https://www.google.com/search?q=comida+cerca+de+mi"
+        >
+
+          🍔
+
+          <b>
+            Comida
+          </b>
+
+          <span>
+            Buscar opciones en la web
+          </span>
+
+        </a>
+
+
+
+        <a
+          class="external-card"
+          target="_blank"
+          rel="noopener"
+          href="https://www.google.com/search?q=compras"
+        >
+
+          🛍️
+
+          <b>
+            Compras
+          </b>
+
+          <span>
+            Buscar productos y tiendas
+          </span>
+
+        </a>
+
+
+
+        <a
+          class="external-card"
+          target="_blank"
+          rel="noopener"
+          href="https://www.google.com/maps"
+        >
+
+          📍
+
+          <b>
+            Cerca de mí
+          </b>
+
+          <span>
+            Abrir mapas
+          </span>
+
+        </a>
+
+
+
+        <a
+          class="external-card"
+          target="_blank"
+          rel="noopener"
+          href="https://www.google.com"
+        >
+
+          🌐
+
+          <b>
+            Web
+          </b>
+
+          <span>
+            Abrir búsqueda web
+          </span>
+
+        </a>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ===================================================
+         AJUSTES
+         =================================================== -->
+
+    <section
+      class="section settings-section"
+    >
+
+      <div class="section-title">
+
+        <div>
+
+          <p class="eyebrow">
+            CONTROL LOCAL
+          </p>
+
+          <h2>
+            Ajustes y datos
+          </h2>
+
+        </div>
+
+      </div>
+
+
+      <div class="settings-grid">
+
+
+        <button
+          class="setting"
+          id="animationBtn"
+        >
+          ✨ Animaciones: activadas
+        </button>
+
+
+
+        <button
+          class="setting"
+          id="exportBtn"
+        >
+          ⬇️ Exportar datos
+        </button>
+
+
+
+        <button
+          class="setting"
+          id="importBtn"
+        >
+          ⬆️ Importar datos
+        </button>
+
+
+
+        <button
+          class="setting danger"
+          id="resetBtn"
+        >
+          ♻️ Restablecer datos
+        </button>
+
+
+        <input
+          id="importFile"
+          type="file"
+          accept="application/json"
+          hidden
+        >
+
+      </div>
+
+
+      <p class="muted">
+
+        Tus notas, tareas y preferencias se guardan
+        localmente en este navegador.
+
+        Las herramientas que consultan servicios
+        externos necesitan internet.
+
+      </p>
+
+    </section>
+
+  </main>
+
+
+
+  <!-- =====================================================
+       PIE DE PÁGINA
+       ===================================================== -->
+
+  <footer>
+
+    <div>
+
+      <strong>
+        ÚtilHub
+      </strong>
+
+      · V14 SUPRIME-MASTER-NOVA
+
+    </div>
+
+    <span>
+      Sin IA · Sin backend · Hecho para herramientas útiles
+    </span>
+
+  </footer>
+
+
+
+  <!-- =====================================================
+       MODAL
+       ===================================================== -->
+
+  <div
+    id="modal"
+    class="modal"
+    hidden
+  >
+
+    <div
+      class="modal-backdrop"
+      data-close
+    ></div>
+
+
+    <section
+      class="modal-box"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+
+      <button
+        class="modal-close"
+        data-close
+        aria-label="Cerrar"
+      >
+        ×
+      </button>
+
+
+      <div
+        id="modalContent"
+      ></div>
+
+    </section>
+
+  </div>
+
+
+
+  <!-- =====================================================
+       MENSAJES
+       ===================================================== -->
+
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+  ></div>
+
+
+
+  <!-- =====================================================
+       JAVASCRIPT
+       ===================================================== -->
+
+  <script src="script.js"></script>
+
+</body>
+</html>
