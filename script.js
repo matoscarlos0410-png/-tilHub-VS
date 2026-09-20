@@ -1,3862 +1,2524 @@
-(() => {
-  "use strict";
-
-  /* =====================================================
-     CONFIGURACIÓN
-     ===================================================== */
-
-  const $ = (selector) =>
-    document.querySelector(selector);
-
-  const $$ = (selector) =>
-    [...document.querySelectorAll(selector)];
-
-  const STORAGE_KEY =
-    "utilhub-v14";
-
-
-  /* =====================================================
-     ESTADO
-     ===================================================== */
-
-  const defaultState = {
-
-    theme: "dark",
-
-    animations: true,
-
-    favorites: [],
-
-    recent: [],
-
-    notes: "",
-
-    tasks: [],
-
-    shopping: [],
-
-    study: []
-
-  };
-
-
-  let state =
-    loadState();
-
-
-  let timer = {
-
-    end: 0,
-
-    duration: 0,
-
-    interval: null
-
-  };
-
-
-  let stopwatch = {
-
-    start: 0,
-
-    elapsed: 0,
-
-    interval: null
-
-  };
-
-
-  let installPrompt = null;
-
-
-  /* =====================================================
-     HERRAMIENTAS
-     ===================================================== */
-
-  const tools = [
-
-    [
-      "calculator",
-      "🧮",
-      "Calculadora",
-      "Operaciones rápidas.",
-      "Cálculo"
-    ],
-
-    [
-      "percent",
-      "％",
-      "Porcentaje",
-      "Calcula porcentajes.",
-      "Cálculo"
-    ],
-
-    [
-      "discount",
-      "🏷️",
-      "Descuento",
-      "Precio final y ahorro.",
-      "Cálculo"
-    ],
-
-    [
-      "rule3",
-      "📐",
-      "Regla de tres",
-      "Resuelve proporciones.",
-      "Cálculo"
-    ],
-
-    [
-      "converter",
-      "📏",
-      "Convertidor",
-      "Longitud, peso, volumen y tiempo.",
-      "Conversión"
-    ],
-
-    [
-      "temperature",
-      "🌡️",
-      "Temperatura",
-      "Convierte °C, °F y K.",
-      "Conversión"
-    ],
-
-    [
-      "currency",
-      "💱",
-      "Monedas",
-      "Consulta tasas y convierte.",
-      "Conversión"
-    ],
-
-    [
-      "date",
-      "📅",
-      "Fechas",
-      "Diferencia entre dos fechas.",
-      "Tiempo"
-    ],
-
-    [
-      "age",
-      "🎂",
-      "Edad",
-      "Calcula edad exacta.",
-      "Tiempo"
-    ],
-
-    [
-      "timer",
-      "⏱️",
-      "Temporizador",
-      "Cuenta regresiva.",
-      "Tiempo"
-    ],
-
-    [
-      "stopwatch",
-      "⏲️",
-      "Cronómetro",
-      "Mide tiempo con precisión.",
-      "Tiempo"
-    ],
-
-    [
-      "notes",
-      "📝",
-      "Notas",
-      "Guarda apuntes localmente.",
-      "Organiza"
-    ],
-
-    [
-      "tasks",
-      "✅",
-      "Tareas",
-      "Gestiona pendientes.",
-      "Organiza"
-    ],
-
-    [
-      "shopping",
-      "🛒",
-      "Compras",
-      "Lista de compras.",
-      "Organiza"
-    ],
-
-    [
-      "study",
-      "📚",
-      "Estudio",
-      "Organiza sesiones de estudio.",
-      "Organiza"
-    ],
-
-    [
-      "password",
-      "🔐",
-      "Contraseñas",
-      "Genera claves seguras.",
-      "Seguridad"
-    ],
-
-    [
-      "random",
-      "🎲",
-      "Aleatorio",
-      "Números y dados.",
-      "Diversión"
-    ],
-
-    [
-      "qr",
-      "▦",
-      "Código QR",
-      "Crea un QR desde un texto.",
-      "Crear"
-    ],
-
-    [
-      "text",
-      "🔤",
-      "Texto",
-      "Contador y transformación de texto.",
-      "Texto"
-    ],
-
-    [
-      "dictionary",
-      "📖",
-      "Diccionario",
-      "Consulta palabras en español o inglés.",
-      "Texto"
-    ]
-
-  ];
-
-
-  const categories = [
-    "Todos",
-    ...new Set(
-      tools.map(tool => tool[4])
-    )
-  ];
-
-
-  let activeCategory =
-    "Todos";
-
-
-  /* =====================================================
-     STORAGE
-     ===================================================== */
-
-  function loadState() {
-
-    try {
-
-      return {
-        ...defaultState,
-
-        ...JSON.parse(
-          localStorage.getItem(STORAGE_KEY) || "{}"
-        )
-
-      };
-
-    } catch {
-
-      return {
-        ...defaultState
-      };
-
-    }
-
-  }
-
-
-  function save() {
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(state)
-    );
-
-    updateStats();
-
-  }
-
-
-  /* =====================================================
-     UTILIDADES
-     ===================================================== */
-
-  function toast(message) {
-
-    const element =
-      $("#toast");
-
-    element.textContent =
-      message;
-
-    element.classList.add(
-      "show"
-    );
-
-    clearTimeout(
-      toast.timer
-    );
-
-    toast.timer =
-      setTimeout(() => {
-
-        element.classList.remove(
-          "show"
-        );
-
-      }, 2200);
-
-  }
-
-
-  function escapeHTML(value) {
-
-    return String(value)
-      .replace(
-        /[&<>"']/g,
-        character => ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;"
-        }[character])
-      );
-
-  }
-
-
-  function money(value) {
-
-    return Number(value)
-      .toLocaleString(
-        "es-PE",
-        {
-          maximumFractionDigits: 2
-        }
-      );
-
-  }
-
-
-  /* =====================================================
-     FILTROS
-     ===================================================== */
-
-  function renderFilters() {
-
-    $("#filters").innerHTML =
-      categories
-        .map(category => `
-
-          <button
-            class="filter ${
-              category === activeCategory
-                ? "active"
-                : ""
-            }"
-            data-cat="${escapeHTML(category)}"
-          >
-            ${escapeHTML(category)}
-          </button>
-
-        `)
-        .join("");
-
-
-    $$("#filters .filter")
-      .forEach(button => {
-
-        button.onclick = () => {
-
-          activeCategory =
-            button.dataset.cat;
-
-          renderTools(
-            $("#globalSearch").value
-          );
-
-          renderFilters();
-
-        };
-
-      });
-
-  }
-
-
-  /* =====================================================
-     TARJETAS
-     ===================================================== */
-
-  function renderTools(query = "") {
-
-    const search =
-      query.trim().toLowerCase();
-
-
-    const visible =
-      tools.filter(tool => {
-
-        const categoryOK =
-          activeCategory === "Todos" ||
-          tool[4] === activeCategory;
-
-
-        const searchOK =
-          !search ||
-          tool
-            .slice(0, 5)
-            .join(" ")
-            .toLowerCase()
-            .includes(search);
-
-
-        return categoryOK &&
-          searchOK;
-
-      });
-
-
-    $("#toolGrid").innerHTML =
-      visible.length
-
-        ? visible.map(tool => {
-
-            const favorite =
-              state.favorites.includes(
-                tool[0]
-              );
-
-
-            return `
-
-              <article
-                class="tool-card"
-              >
-
-                <button
-                  class="fav ${
-                    favorite ? "on" : ""
-                  }"
-                  title="Favorito"
-                  data-fav="${tool[0]}"
-                >
-                  ${favorite ? "★" : "☆"}
-                </button>
-
-                <div class="tool-icon">
-                  ${tool[1]}
-                </div>
-
-                <h3>
-                  ${escapeHTML(tool[2])}
-                </h3>
-
-                <p>
-                  ${escapeHTML(tool[3])}
-                </p>
-
-                <button
-                  class="tool-open"
-                  data-tool="${tool[0]}"
-                >
-                  Abrir
-                </button>
-
-              </article>
-
-            `;
-
-          }).join("")
-
-        : `
-
-          <p class="muted">
-            No encontramos esa herramienta.
-          </p>
-
-        `;
-
-
-    $$("#toolGrid [data-tool]")
-      .forEach(button => {
-
-        button.onclick = () => {
-
-          openTool(
-            button.dataset.tool
-          );
-
-        };
-
-      });
-
-
-    $$("#toolGrid [data-fav]")
-      .forEach(button => {
-
-        button.onclick = () => {
-
-          toggleFavorite(
-            button.dataset.fav
-          );
-
-        };
-
-      });
-
-  }
-
-
-  /* =====================================================
-     ESTADÍSTICAS
-     ===================================================== */
-
-  function updateStats() {
-
-    $("#toolCount").textContent =
-      tools.length;
-
-    $("#favCount").textContent =
-      state.favorites.length;
-
-    $("#recentCount").textContent =
-      state.recent.length;
-
-    $("#onlineStatus").textContent =
-      navigator.onLine
-        ? "●"
-        : "○";
-
-  }
-
-
-  /* =====================================================
-     FAVORITOS
-     ===================================================== */
-
-  function toggleFavorite(id) {
-
-    if (
-      state.favorites.includes(id)
-    ) {
-
-      state.favorites =
-        state.favorites.filter(
-          item => item !== id
-        );
-
-      toast(
-        "Quitado de favoritos"
-      );
-
-    } else {
-
-      state.favorites.push(id);
-
-      toast(
-        "Añadido a favoritos"
-      );
-
-    }
-
-
-    save();
-
-    renderTools(
-      $("#globalSearch").value
-    );
-
-  }
-
-
-  /* =====================================================
-     HISTORIAL
-     ===================================================== */
-
-  function addRecent(id) {
-
-    state.recent = [
-      id,
-      ...state.recent.filter(
-        item => item !== id
-      )
-    ].slice(0, 10);
-
-
-    save();
-
-  }
-
-
-  /* =====================================================
-     MODAL
-     ===================================================== */
-
-  function openModal(title, content) {
-
-    $("#modalContent").innerHTML = `
-
-      <h2>
-        ${title}
-      </h2>
-
-      ${content}
-
-    `;
-
-
-    $("#modal").hidden =
-      false;
-
-  }
-
-
-  function closeModal() {
-
-    $("#modal").hidden =
-      true;
-
-  }
-
-
-  $$("[data-close]")
-    .forEach(element => {
-
-      element.onclick =
-        closeModal;
-
-    });
-
-
-  document.addEventListener(
-    "keydown",
-    event => {
-
-      if (
-        event.key === "Escape"
-      ) {
-
-        closeModal();
-
-      }
-
-    }
-  );
-
-
-  /* =====================================================
-     ABRIR HERRAMIENTA
-     ===================================================== */
-
-  function openTool(id) {
-
-    addRecent(id);
-
-
-    const tool =
-      tools.find(
-        item => item[0] === id
-      );
-
-
-    if (!tool) {
-      return;
-    }
-
-
-    const functions = {
-
-      calculator,
-      percent,
-      discount,
-      rule3,
-      converter,
-      temperature,
-      currency,
-      date,
-      age,
-      timer,
-      stopwatch,
-      notes,
-      tasks,
-      shopping,
-      study,
-      password,
-      random,
-      qr,
-      text,
-      dictionary
-
+"use strict";
+
+/* =========================================================
+   ÚTILHUB V14
+   SUPRIME-MASTER-NOVA
+   SIN IA · SIN BACKEND
+========================================================= */
+
+const STORAGE_KEY = "utilhub-v14";
+
+const defaultState = {
+  theme: "dark",
+  animations: true,
+  favorites: [],
+  recent: [],
+  notes: [],
+  tasks: [],
+  shopping: [],
+  study: [],
+  currency: {}
+};
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+    return {
+      ...defaultState,
+      ...(saved || {})
     };
+  } catch {
+    return { ...defaultState };
+  }
+}
+
+function saveState() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(state)
+  );
+}
 
 
-    if (functions[id]) {
+/* =========================================================
+   HERRAMIENTAS
+========================================================= */
 
-      functions[id]();
+const tools = [
 
-    }
+  {
+    id: "calculator",
+    name: "Calculadora",
+    icon: "🧮",
+    category: "Cálculo",
+    description: "Realiza operaciones matemáticas."
+  },
 
+  {
+    id: "percentage",
+    name: "Porcentajes",
+    icon: "％",
+    category: "Cálculo",
+    description: "Calcula porcentajes rápidamente."
+  },
 
-    updateStats();
+  {
+    id: "discount",
+    name: "Descuentos",
+    icon: "🏷️",
+    category: "Cálculo",
+    description: "Calcula precios con descuento."
+  },
 
+  {
+    id: "rule3",
+    name: "Regla de 3",
+    icon: "📐",
+    category: "Cálculo",
+    description: "Resuelve reglas de tres."
+  },
+
+  {
+    id: "length",
+    name: "Longitud",
+    icon: "📏",
+    category: "Conversión",
+    description: "Convierte unidades de longitud."
+  },
+
+  {
+    id: "weight",
+    name: "Peso",
+    icon: "⚖️",
+    category: "Conversión",
+    description: "Convierte unidades de peso."
+  },
+
+  {
+    id: "volume",
+    name: "Volumen",
+    icon: "🧪",
+    category: "Conversión",
+    description: "Convierte unidades de volumen."
+  },
+
+  {
+    id: "timeconvert",
+    name: "Tiempo",
+    icon: "⏱️",
+    category: "Conversión",
+    description: "Convierte unidades de tiempo."
+  },
+
+  {
+    id: "temperature",
+    name: "Temperatura",
+    icon: "🌡️",
+    category: "Conversión",
+    description: "Convierte Celsius, Fahrenheit y Kelvin."
+  },
+
+  {
+    id: "currency",
+    name: "Moneda",
+    icon: "💱",
+    category: "Conversión",
+    description: "Consulta tipos de cambio."
+  },
+
+  {
+    id: "date",
+    name: "Diferencia de fechas",
+    icon: "📅",
+    category: "Tiempo",
+    description: "Calcula días entre dos fechas."
+  },
+
+  {
+    id: "age",
+    name: "Edad",
+    icon: "🎂",
+    category: "Tiempo",
+    description: "Calcula una edad aproximada."
+  },
+
+  {
+    id: "timer",
+    name: "Temporizador",
+    icon: "⏳",
+    category: "Tiempo",
+    description: "Cuenta hacia atrás."
+  },
+
+  {
+    id: "stopwatch",
+    name: "Cronómetro",
+    icon: "⏱️",
+    category: "Tiempo",
+    description: "Mide el tiempo transcurrido."
+  },
+
+  {
+    id: "password",
+    name: "Contraseña",
+    icon: "🔐",
+    category: "Seguridad",
+    description: "Genera contraseñas aleatorias."
+  },
+
+  {
+    id: "random",
+    name: "Aleatorio",
+    icon: "🎲",
+    category: "Utilidades",
+    description: "Genera números o lanza dados."
+  },
+
+  {
+    id: "qr",
+    name: "Código QR",
+    icon: "▦",
+    category: "Utilidades",
+    description: "Crea códigos QR."
+  },
+
+  {
+    id: "text",
+    name: "Texto",
+    icon: "🔤",
+    category: "Texto",
+    description: "Herramientas para transformar texto."
+  },
+
+  {
+    id: "dictionary",
+    name: "Diccionario",
+    icon: "📖",
+    category: "Texto",
+    description: "Busca definiciones."
+  },
+
+  {
+    id: "notes",
+    name: "Notas",
+    icon: "📝",
+    category: "Organización",
+    description: "Guarda notas localmente."
   }
 
+];
 
-  /* =====================================================
-     TARJETAS DE ORGANIZACIÓN
-     ===================================================== */
 
-  $$(".action-card")
+const categories = [
+  "Todas",
+  ...new Set(tools.map(tool => tool.category))
+];
+
+let currentCategory = "Todas";
+
+
+/* =========================================================
+   ELEMENTOS
+========================================================= */
+
+const toolGrid = document.getElementById("toolGrid");
+const filters = document.getElementById("filters");
+const globalSearch = document.getElementById("globalSearch");
+const searchResults = document.getElementById("searchResults");
+
+const modal = document.getElementById("modal");
+const modalContent = document.getElementById("modalContent");
+
+const toast = document.getElementById("toast");
+
+const favCount = document.getElementById("favCount");
+const recentCount = document.getElementById("recentCount");
+const toolCount = document.getElementById("toolCount");
+const onlineStatus = document.getElementById("onlineStatus");
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+let toastTimer;
+
+function showToast(message) {
+
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  clearTimeout(toastTimer);
+
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2200);
+}
+
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+function openModal(content) {
+
+  modalContent.innerHTML = content;
+  modal.hidden = false;
+
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal() {
+
+  modal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+document.querySelectorAll("[data-close]").forEach(el => {
+  el.addEventListener("click", closeModal);
+});
+
+document.addEventListener("keydown", event => {
+
+  if (event.key === "Escape") {
+    closeModal();
+  }
+
+});
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function renderFilters() {
+
+  filters.innerHTML = categories
+    .map(category => `
+      <button
+        class="filter-btn ${category === currentCategory ? "active" : ""}"
+        data-category="${category}"
+      >
+        ${category}
+      </button>
+    `)
+    .join("");
+
+  filters.querySelectorAll(".filter-btn")
     .forEach(button => {
 
-      button.onclick = () => {
+      button.addEventListener("click", () => {
 
-        openTool(
-          button.dataset.tool
-        );
+        currentCategory =
+          button.dataset.category;
 
-      };
+        renderFilters();
+        renderTools();
+
+      });
 
     });
 
-
-  /* =====================================================
-     CALCULADORA
-     ===================================================== */
-
-  function calculator() {
-
-    openModal(
-      "🧮 Calculadora",
-
-      `
-
-      <div class="field">
-
-        <label>
-          Expresión
-        </label>
-
-        <input
-          id="calcIn"
-          placeholder="Ej.: (25+15)*2/5"
-        >
-
-      </div>
+}
 
 
-      <div class="modal-actions">
+function renderTools() {
 
-        <button
-          class="primary"
-          id="calcGo"
-        >
-          Calcular
-        </button>
+  let visible = tools;
 
-      </div>
+  if (currentCategory !== "Todas") {
 
-
-      <div
-        id="calcOut"
-        class="result-box"
-      >
-        Introduce una operación.
-      </div>
-
-      `
+    visible = visible.filter(
+      tool => tool.category === currentCategory
     );
-
-
-    $("#calcGo").onclick =
-      () => {
-
-        try {
-
-          $("#calcOut")
-            .textContent =
-            "Resultado: " +
-            safeCalculator(
-              $("#calcIn").value
-            );
-
-        } catch {
-
-          $("#calcOut")
-            .textContent =
-            "Expresión no válida.";
-
-        }
-
-      };
 
   }
 
+  toolGrid.innerHTML = visible
+    .map(tool => toolCard(tool))
+    .join("");
 
-  function safeCalculator(source) {
+  toolGrid
+    .querySelectorAll(".tool-card")
+    .forEach(card => {
 
-    let expression =
-      source
-        .replace(/\s+/g, "")
-        .replace(/,/g, ".");
-
-
-    if (
-      !/^[0-9.+\-*/%()]+$/
-        .test(expression) ||
-      !expression
-    ) {
-
-      throw Error();
-
-    }
-
-
-    let index = 0;
-
-
-    function peek() {
-
-      return expression[index];
-
-    }
-
-
-    function eat(character) {
-
-      if (
-        expression[index] ===
-        character
-      ) {
-
-        index++;
-
-        return true;
-
-      }
-
-      return false;
-
-    }
-
-
-    function expressionParser() {
-
-      let value =
-        term();
-
-
-      while (
-        peek() === "+" ||
-        peek() === "-"
-      ) {
-
-        const operator =
-          expression[index++];
-
-        const right =
-          term();
-
-
-        value =
-          operator === "+"
-            ? value + right
-            : value - right;
-
-      }
-
-
-      return value;
-
-    }
-
-
-    function term() {
-
-      let value =
-        factor();
-
-
-      while (
-        peek() === "*" ||
-        peek() === "/"
-      ) {
-
-        const operator =
-          expression[index++];
-
-        const right =
-          factor();
-
+      card.addEventListener("click", event => {
 
         if (
-          operator === "*"
+          event.target.closest(".favorite")
         ) {
-
-          value *= right;
-
-        } else {
-
-          if (right === 0) {
-            throw Error();
-          }
-
-          value /= right;
-
-        }
-
-      }
-
-
-      return value;
-
-    }
-
-
-    function factor() {
-
-      if (eat("+")) {
-
-        return factor();
-
-      }
-
-
-      if (eat("-")) {
-
-        return -factor();
-
-      }
-
-
-      if (eat("(")) {
-
-        const value =
-          expressionParser();
-
-
-        if (!eat(")")) {
-
-          throw Error();
-
-        }
-
-
-        return value;
-
-      }
-
-
-      const match =
-        expression
-          .slice(index)
-          .match(
-            /^(?:\d+(?:\.\d*)?|\.\d+)/
-          );
-
-
-      if (!match) {
-
-        throw Error();
-
-      }
-
-
-      index +=
-        match[0].length;
-
-
-      let value =
-        Number(match[0]);
-
-
-      if (eat("%")) {
-
-        value /= 100;
-
-      }
-
-
-      return value;
-
-    }
-
-
-    const result =
-      expressionParser();
-
-
-    if (
-      index !==
-      expression.length ||
-      !Number.isFinite(result)
-    ) {
-
-      throw Error();
-
-    }
-
-
-    return Number(
-      result.toFixed(10)
-    );
-
-  }
-
-
-  /* =====================================================
-     PORCENTAJE
-     ===================================================== */
-
-  function percent() {
-
-    openModal(
-      "％ Porcentaje",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Porcentaje
-          </label>
-
-          <input
-            id="p1"
-            type="number"
-            value="20"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Número
-          </label>
-
-          <input
-            id="p2"
-            type="number"
-            value="150"
-          >
-
-        </div>
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="pgo"
-        >
-          Calcular
-        </button>
-
-      </div>
-
-
-      <div
-        id="pout"
-        class="result-box"
-      >
-        Resultado: 30
-      </div>
-
-      `
-    );
-
-
-    $("#pgo").onclick =
-      () => {
-
-        const percentage =
-          Number(
-            $("#p1").value
-          );
-
-        const number =
-          Number(
-            $("#p2").value
-          );
-
-
-        $("#pout")
-          .textContent =
-          "Resultado: " +
-          money(
-            percentage *
-            number /
-            100
-          );
-
-      };
-
-  }
-
-
-  /* =====================================================
-     DESCUENTO
-     ===================================================== */
-
-  function discount() {
-
-    openModal(
-      "🏷️ Descuento",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Precio
-          </label>
-
-          <input
-            id="d1"
-            type="number"
-            value="100"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Descuento %
-          </label>
-
-          <input
-            id="d2"
-            type="number"
-            value="20"
-          >
-
-        </div>
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="dgo"
-        >
-          Calcular
-        </button>
-
-      </div>
-
-
-      <div
-        id="dout"
-        class="result-box"
-      ></div>
-
-      `
-    );
-
-
-    $("#dgo").onclick =
-      () => {
-
-        const price =
-          Number(
-            $("#d1").value
-          );
-
-        const discountValue =
-          Number(
-            $("#d2").value
-          );
-
-
-        const saving =
-          price *
-          discountValue /
-          100;
-
-
-        $("#dout")
-          .textContent =
-          `Ahorras: ${money(saving)} · Precio final: ${money(price - saving)}`;
-
-      };
-
-  }
-
-
-  /* =====================================================
-     REGLA DE TRES
-     ===================================================== */
-
-  function rule3() {
-
-    openModal(
-      "📐 Regla de tres",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            A
-          </label>
-
-          <input
-            id="r1"
-            type="number"
-            value="4"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            B
-          </label>
-
-          <input
-            id="r2"
-            type="number"
-            value="12"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            C
-          </label>
-
-          <input
-            id="r3"
-            type="number"
-            value="7"
-          >
-
-        </div>
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="rgo"
-        >
-          Resolver
-        </button>
-
-      </div>
-
-
-      <div
-        id="rout"
-        class="result-box"
-      >
-        x = C × B ÷ A
-      </div>
-
-      `
-    );
-
-
-    $("#rgo").onclick =
-      () => {
-
-        const a =
-          Number(
-            $("#r1").value
-          );
-
-        const b =
-          Number(
-            $("#r2").value
-          );
-
-        const c =
-          Number(
-            $("#r3").value
-          );
-
-
-        if (a === 0) {
-
-          $("#rout")
-            .textContent =
-            "A no puede ser 0.";
-
           return;
-
         }
 
+        openTool(card.dataset.tool);
 
-        $("#rout")
-          .textContent =
-          "x = " +
-          money(
-            c * b / a
-          );
+      });
 
-      };
+    });
+
+  toolGrid
+    .querySelectorAll(".favorite")
+    .forEach(button => {
+
+      button.addEventListener("click", event => {
+
+        event.stopPropagation();
+
+        toggleFavorite(button.dataset.id);
+
+      });
+
+    });
+
+}
+
+
+function toolCard(tool) {
+
+  const favorite =
+    state.favorites.includes(tool.id);
+
+  return `
+    <article
+      class="tool-card"
+      data-tool="${tool.id}"
+    >
+
+      <button
+        class="favorite ${favorite ? "active" : ""}"
+        data-id="${tool.id}"
+        title="Favorito"
+      >
+        ${favorite ? "★" : "☆"}
+      </button>
+
+      <div class="tool-icon">
+        ${tool.icon}
+      </div>
+
+      <h3>
+        ${tool.name}
+      </h3>
+
+      <p>
+        ${tool.description}
+      </p>
+
+    </article>
+  `;
+}
+
+
+/* =========================================================
+   FAVORITOS
+========================================================= */
+
+function toggleFavorite(id) {
+
+  if (state.favorites.includes(id)) {
+
+    state.favorites =
+      state.favorites.filter(
+        item => item !== id
+      );
+
+    showToast("Quitado de favoritos");
+
+  } else {
+
+    state.favorites.push(id);
+
+    showToast("Añadido a favoritos");
 
   }
 
-
-  /* =====================================================
-     CONVERSOR
-     ===================================================== */
-
-  function converter() {
-
-    openModal(
-      "📏 Convertidor",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Tipo
-          </label>
-
-          <select id="ct">
-
-            <option value="length">
-              Longitud
-            </option>
-
-            <option value="weight">
-              Peso
-            </option>
-
-            <option value="volume">
-              Volumen
-            </option>
-
-            <option value="time">
-              Tiempo
-            </option>
-
-          </select>
-
-        </div>
+  saveState();
+  updateStats();
+  renderTools();
+}
 
 
-        <div class="field">
+function addRecent(id) {
 
-          <label>
-            Valor
-          </label>
-
-          <input
-            id="cv"
-            type="number"
-            value="1"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            De
-          </label>
-
-          <select id="cf"></select>
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            A
-          </label>
-
-          <select id="cto"></select>
-
-        </div>
-
-      </div>
-
-
-      <div
-        id="cout"
-        class="result-box"
-      ></div>
-
-      `
+  state.recent =
+    state.recent.filter(
+      item => item !== id
     );
 
+  state.recent.unshift(id);
 
-    const maps = {
+  state.recent =
+    state.recent.slice(0, 10);
 
-      length: {
-
-        values: {
-          m: 1,
-          km: 1000,
-          cm: 0.01,
-          mm: 0.001,
-          ft: 0.3048,
-          in: 0.0254
-        },
-
-        names: {
-          m: "metros",
-          km: "kilómetros",
-          cm: "centímetros",
-          mm: "milímetros",
-          ft: "pies",
-          in: "pulgadas"
-        }
-
-      },
+  saveState();
+  updateStats();
+}
 
 
-      weight: {
+/* =========================================================
+   ESTADÍSTICAS
+========================================================= */
 
-        values: {
-          kg: 1,
-          g: 0.001,
-          lb: 0.453592,
-          oz: 0.0283495
-        },
+function updateStats() {
 
-        names: {
-          kg: "kg",
-          g: "g",
-          lb: "libras",
-          oz: "oz"
-        }
+  toolCount.textContent =
+    tools.length;
 
-      },
+  favCount.textContent =
+    state.favorites.length;
 
+  recentCount.textContent =
+    state.recent.length;
 
-      volume: {
+  onlineStatus.textContent =
+    navigator.onLine ? "●" : "○";
+}
 
-        values: {
-          l: 1,
-          ml: 0.001,
-          m3: 1000,
-          gal: 3.78541
-        },
-
-        names: {
-          l: "litros",
-          ml: "mililitros",
-          m3: "m³",
-          gal: "galones"
-        }
-
-      },
+window.addEventListener("online", updateStats);
+window.addEventListener("offline", updateStats);
 
 
-      time: {
+/* =========================================================
+   BUSCADOR
+========================================================= */
 
-        values: {
-          s: 1,
-          min: 60,
-          h: 3600,
-          day: 86400
-        },
+globalSearch.addEventListener("input", () => {
 
-        names: {
-          s: "segundos",
-          min: "minutos",
-          h: "horas",
-          day: "días"
-        }
+  const query =
+    globalSearch.value.trim().toLowerCase();
+
+  if (!query) {
+
+    searchResults.innerHTML = "";
+    return;
+
+  }
+
+  const results =
+    tools.filter(tool =>
+      `${tool.name} ${tool.description} ${tool.category}`
+        .toLowerCase()
+        .includes(query)
+    );
+
+  searchResults.innerHTML =
+    results.map(tool => `
+      <div
+        class="search-result"
+        data-tool="${tool.id}"
+      >
+        ${tool.icon}
+        <b>${tool.name}</b>
+        <small> · ${tool.category}</small>
+      </div>
+    `).join("");
+
+  searchResults
+    .querySelectorAll(".search-result")
+    .forEach(result => {
+
+      result.addEventListener("click", () => {
+
+        globalSearch.value = "";
+        searchResults.innerHTML = "";
+
+        openTool(result.dataset.tool);
+
+      });
+
+    });
+
+});
+
+
+/* =========================================================
+   ABRIR HERRAMIENTA
+========================================================= */
+
+function openTool(id) {
+
+  addRecent(id);
+
+  const tool =
+    tools.find(item => item.id === id);
+
+  if (!tool) return;
+
+  const functions = {
+    calculator: calculatorUI,
+    percentage: percentageUI,
+    discount: discountUI,
+    rule3: rule3UI,
+    length: lengthUI,
+    weight: weightUI,
+    volume: volumeUI,
+    timeconvert: timeConvertUI,
+    temperature: temperatureUI,
+    currency: currencyUI,
+    date: dateUI,
+    age: ageUI,
+    timer: timerUI,
+    stopwatch: stopwatchUI,
+    password: passwordUI,
+    random: randomUI,
+    qr: qrUI,
+    text: textUI,
+    dictionary: dictionaryUI,
+    notes: notesUI
+  };
+
+  if (functions[id]) {
+    functions[id]();
+  }
+
+}
+
+
+/* =========================================================
+   CALCULADORA
+========================================================= */
+
+function calculatorUI() {
+
+  openModal(`
+    <h2>🧮 Calculadora</h2>
+
+    <div class="form-group">
+      <label>Operación</label>
+
+      <input
+        id="calcInput"
+        placeholder="Ej.: 25 * 4 + 10 / 2"
+      >
+    </div>
+
+    <br>
+
+    <button
+      class="form-button"
+      id="calcBtn"
+    >
+      Calcular
+    </button>
+
+    <div id="calcResult"></div>
+  `);
+
+  document
+    .getElementById("calcBtn")
+    .addEventListener("click", () => {
+
+      const input =
+        document.getElementById("calcInput").value;
+
+      try {
+
+        const expression =
+          input.replace(/[^0-9+\-*/().%\s]/g, "");
+
+        const result =
+          Function(
+            `"use strict"; return (${expression})`
+          )();
+
+        document.getElementById("calcResult").innerHTML = `
+          <div class="result">
+            <div class="big-result">
+              ${result}
+            </div>
+          </div>
+        `;
+
+      } catch {
+
+        showToast("Operación no válida");
 
       }
 
-    };
+    });
+
+}
 
 
-    function fillUnits() {
+/* =========================================================
+   PORCENTAJES
+========================================================= */
 
-      const map =
-        maps[
-          $("#ct").value
-        ];
+function percentageUI() {
 
+  openModal(`
+    <h2>％ Porcentajes</h2>
 
-      const options =
-        Object.keys(
-          map.values
-        )
-        .map(
-          key =>
-            `<option value="${key}">
-              ${map.names[key]}
-            </option>`
-        )
-        .join("");
+    <div class="form-grid">
 
+      <div class="form-group">
+        <label>Porcentaje</label>
+        <input id="percentValue" type="number">
+      </div>
 
-      $("#cf").innerHTML =
-        options;
+      <div class="form-group">
+        <label>De</label>
+        <input id="percentBase" type="number">
+      </div>
 
-      $("#cto").innerHTML =
-        options;
+    </div>
 
+    <br>
 
-      calculate();
+    <button class="form-button" id="percentBtn">
+      Calcular
+    </button>
 
-    }
+    <div id="percentResult"></div>
+  `);
 
+  document
+    .getElementById("percentBtn")
+    .addEventListener("click", () => {
 
-    function calculate() {
+      const p =
+        Number(document.getElementById("percentValue").value);
 
-      const map =
-        maps[
-          $("#ct").value
-        ];
-
-
-      const from =
-        $("#cf").value;
-
-      const to =
-        $("#cto").value;
-
-      const value =
-        Number(
-          $("#cv").value
-        );
-
+      const base =
+        Number(document.getElementById("percentBase").value);
 
       const result =
-        value *
-        map.values[from] /
-        map.values[to];
+        base * p / 100;
 
-
-      $("#cout")
-        .textContent =
-        `Resultado: ${money(result)} ${map.names[to]}`;
-
-    }
-
-
-    $("#ct").onchange =
-      fillUnits;
-
-    $("#cv").oninput =
-      calculate;
-
-    $("#cf").oninput =
-      calculate;
-
-    $("#cto").oninput =
-      calculate;
-
-
-    fillUnits();
-
-  }
-
-
-  /* =====================================================
-     TEMPERATURA
-     ===================================================== */
-
-  function temperature() {
-
-    openModal(
-      "🌡️ Temperatura",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Valor
-          </label>
-
-          <input
-            id="tv"
-            type="number"
-            value="25"
-          >
-
+      document.getElementById("percentResult").innerHTML = `
+        <div class="result">
+          <div class="big-result">${result}</div>
         </div>
+      `;
+
+    });
+
+}
 
 
-        <div class="field">
+/* =========================================================
+   DESCUENTO
+========================================================= */
 
-          <label>
-            De
-          </label>
+function discountUI() {
 
-          <select id="tf">
+  openModal(`
+    <h2>🏷️ Descuentos</h2>
 
-            <option>°C</option>
-            <option>°F</option>
-            <option>K</option>
+    <div class="form-grid">
 
-          </select>
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            A
-          </label>
-
-          <select id="tt">
-
-            <option>°F</option>
-            <option>°C</option>
-            <option>K</option>
-
-          </select>
-
-        </div>
-
+      <div class="form-group">
+        <label>Precio</label>
+        <input id="discountPrice" type="number">
       </div>
 
+      <div class="form-group">
+        <label>Descuento %</label>
+        <input id="discountPercent" type="number">
+      </div>
 
-      <div
-        id="tout"
-        class="result-box"
-      ></div>
+    </div>
 
-      `
-    );
+    <br>
+
+    <button class="form-button" id="discountBtn">
+      Calcular
+    </button>
+
+    <div id="discountResult"></div>
+  `);
+
+  document
+    .getElementById("discountBtn")
+    .addEventListener("click", () => {
+
+      const price =
+        Number(document.getElementById("discountPrice").value);
+
+      const percent =
+        Number(document.getElementById("discountPercent").value);
+
+      const saved =
+        price * percent / 100;
+
+      const finalPrice =
+        price - saved;
+
+      document.getElementById("discountResult").innerHTML = `
+        <div class="result">
+          Ahorras: <b>${saved.toFixed(2)}</b>
+          <br><br>
+          Precio final:
+          <div class="big-result">
+            ${finalPrice.toFixed(2)}
+          </div>
+        </div>
+      `;
+
+    });
+
+}
 
 
-    function calculate() {
+/* =========================================================
+   REGLA DE 3
+========================================================= */
+
+function rule3UI() {
+
+  openModal(`
+    <h2>📐 Regla de 3</h2>
+
+    <p>
+      Si A corresponde a B,
+      ¿cuánto corresponde a C?
+    </p>
+
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>A</label>
+        <input id="rA" type="number">
+      </div>
+
+      <div class="form-group">
+        <label>B</label>
+        <input id="rB" type="number">
+      </div>
+
+      <div class="form-group">
+        <label>C</label>
+        <input id="rC" type="number">
+      </div>
+
+    </div>
+
+    <br>
+
+    <button class="form-button" id="rBtn">
+      Resolver
+    </button>
+
+    <div id="rResult"></div>
+  `);
+
+  document
+    .getElementById("rBtn")
+    .addEventListener("click", () => {
+
+      const A = Number(document.getElementById("rA").value);
+      const B = Number(document.getElementById("rB").value);
+      const C = Number(document.getElementById("rC").value);
+
+      if (A === 0) {
+        showToast("A no puede ser 0");
+        return;
+      }
+
+      const X = B * C / A;
+
+      document.getElementById("rResult").innerHTML = `
+        <div class="result">
+          Resultado:
+          <div class="big-result">
+            ${X}
+          </div>
+        </div>
+      `;
+
+    });
+
+}
+
+
+/* =========================================================
+   CONVERSIONES
+========================================================= */
+
+const conversionUnits = {
+
+  length: {
+    m: 1,
+    km: 1000,
+    cm: .01,
+    mm: .001,
+    mi: 1609.344,
+    ft: .3048
+  },
+
+  weight: {
+    kg: 1,
+    g: .001,
+    mg: .000001,
+    lb: .45359237
+  },
+
+  volume: {
+    l: 1,
+    ml: .001,
+    m3: 1000,
+    gal: 3.785411784
+  },
+
+  timeconvert: {
+    s: 1,
+    min: 60,
+    h: 3600,
+    day: 86400
+  }
+
+};
+
+
+function conversionUI(type, title, icon) {
+
+  const units =
+    Object.keys(conversionUnits[type]);
+
+  openModal(`
+    <h2>${icon} ${title}</h2>
+
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Cantidad</label>
+        <input id="convValue" type="number" value="1">
+      </div>
+
+      <div class="form-group">
+        <label>Desde</label>
+
+        <select id="convFrom">
+          ${units.map(u => `<option value="${u}">${u}</option>`).join("")}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Hacia</label>
+
+        <select id="convTo">
+          ${units.map(u => `<option value="${u}">${u}</option>`).join("")}
+        </select>
+      </div>
+
+    </div>
+
+    <br>
+
+    <button class="form-button" id="convBtn">
+      Convertir
+    </button>
+
+    <div id="convResult"></div>
+  `);
+
+  document
+    .getElementById("convBtn")
+    .addEventListener("click", () => {
 
       const value =
-        Number(
-          $("#tv").value
-        );
+        Number(document.getElementById("convValue").value);
 
       const from =
-        $("#tf").value;
+        document.getElementById("convFrom").value;
 
       const to =
-        $("#tt").value;
+        document.getElementById("convTo").value;
 
+      const base =
+        value * conversionUnits[type][from];
+
+      const result =
+        base / conversionUnits[type][to];
+
+      document.getElementById("convResult").innerHTML = `
+        <div class="result">
+          <div class="big-result">
+            ${result}
+          </div>
+        </div>
+      `;
+
+    });
+
+}
+
+
+function lengthUI() {
+  conversionUI("length", "Longitud", "📏");
+}
+
+function weightUI() {
+  conversionUI("weight", "Peso", "⚖️");
+}
+
+function volumeUI() {
+  conversionUI("volume", "Volumen", "🧪");
+}
+
+function timeConvertUI() {
+  conversionUI("timeconvert", "Tiempo", "⏱️");
+}
+
+
+/* =========================================================
+   TEMPERATURA
+========================================================= */
+
+function temperatureUI() {
+
+  openModal(`
+    <h2>🌡️ Temperatura</h2>
+
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Cantidad</label>
+        <input id="tempValue" type="number">
+      </div>
+
+      <div class="form-group">
+        <label>Desde</label>
+
+        <select id="tempFrom">
+          <option value="C">Celsius</option>
+          <option value="F">Fahrenheit</option>
+          <option value="K">Kelvin</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Hacia</label>
+
+        <select id="tempTo">
+          <option value="C">Celsius</option>
+          <option value="F">Fahrenheit</option>
+          <option value="K">Kelvin</option>
+        </select>
+      </div>
+
+    </div>
+
+    <br>
+
+    <button class="form-button" id="tempBtn">
+      Convertir
+    </button>
+
+    <div id="tempResult"></div>
+  `);
+
+  document
+    .getElementById("tempBtn")
+    .addEventListener("click", () => {
+
+      const value =
+        Number(document.getElementById("tempValue").value);
+
+      const from =
+        document.getElementById("tempFrom").value;
+
+      const to =
+        document.getElementById("tempTo").value;
 
       let celsius;
 
-
-      if (from === "°C") {
-
-        celsius =
-          value;
-
-      } else if (from === "°F") {
-
-        celsius =
-          (value - 32) *
-          5 / 9;
-
-      } else {
-
-        celsius =
-          value - 273.15;
-
+      if (from === "C") {
+        celsius = value;
       }
 
+      if (from === "F") {
+        celsius = (value - 32) * 5 / 9;
+      }
+
+      if (from === "K") {
+        celsius = value - 273.15;
+      }
 
       let result;
 
+      if (to === "C") {
+        result = celsius;
+      }
 
-      if (to === "°C") {
+      if (to === "F") {
+        result = celsius * 9 / 5 + 32;
+      }
 
-        result =
-          celsius;
+      if (to === "K") {
+        result = celsius + 273.15;
+      }
 
-      } else if (to === "°F") {
+      document.getElementById("tempResult").innerHTML = `
+        <div class="result">
+          <div class="big-result">
+            ${result.toFixed(3)}
+          </div>
+        </div>
+      `;
 
-        result =
-          celsius *
-          9 / 5 +
-          32;
+    });
 
-      } else {
+}
 
-        result =
-          celsius +
-          273.15;
+
+/* =========================================================
+   MONEDA
+========================================================= */
+
+async function currencyUI() {
+
+  openModal(`
+    <h2>💱 Conversor de moneda</h2>
+
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Cantidad</label>
+        <input id="currencyValue" type="number" value="1">
+      </div>
+
+      <div class="form-group">
+        <label>Desde</label>
+        <input id="currencyFrom" value="PEN">
+      </div>
+
+      <div class="form-group">
+        <label>Hacia</label>
+        <input id="currencyTo" value="USD">
+      </div>
+
+    </div>
+
+    <br>
+
+    <button class="form-button" id="currencyBtn">
+      Consultar
+    </button>
+
+    <div id="currencyResult"></div>
+  `);
+
+  document
+    .getElementById("currencyBtn")
+    .addEventListener("click", async () => {
+
+      const amount =
+        Number(document.getElementById("currencyValue").value);
+
+      const from =
+        document.getElementById("currencyFrom").value
+          .trim()
+          .toUpperCase();
+
+      const to =
+        document.getElementById("currencyTo").value
+          .trim()
+          .toUpperCase();
+
+      const resultBox =
+        document.getElementById("currencyResult");
+
+      resultBox.innerHTML =
+        `<div class="result">Consultando...</div>`;
+
+      try {
+
+        const response =
+          await fetch(
+            `https://open.er-api.com/v6/latest/${encodeURIComponent(from)}`
+          );
+
+        const data =
+          await response.json();
+
+        if (!data.rates || !data.rates[to]) {
+          throw new Error("Moneda no encontrada");
+        }
+
+        const rate =
+          data.rates[to];
+
+        const result =
+          amount * rate;
+
+        state.currency = {
+          from,
+          to,
+          rate,
+          updated: Date.now()
+        };
+
+        saveState();
+
+        resultBox.innerHTML = `
+          <div class="result">
+
+            <div class="big-result">
+              ${result.toFixed(4)} ${to}
+            </div>
+
+            <p>
+              1 ${from} = ${rate} ${to}
+            </p>
+
+          </div>
+        `;
+
+      } catch {
+
+        const cached = state.currency;
+
+        if (
+          cached &&
+          cached.from === from &&
+          cached.to === to
+        ) {
+
+          const result =
+            amount * cached.rate;
+
+          resultBox.innerHTML = `
+            <div class="result">
+
+              Sin conexión. Usando
+              la última tasa guardada.
+
+              <div class="big-result">
+                ${result.toFixed(4)} ${to}
+              </div>
+
+            </div>
+          `;
+
+        } else {
+
+          resultBox.innerHTML =
+            `<div class="result">
+              No se pudo consultar la tasa.
+              Comprueba tu conexión.
+            </div>`;
+
+        }
 
       }
 
+    });
 
-      $("#tout")
-        .textContent =
-        `Resultado: ${money(result)} ${to}`;
-
-    }
+}
 
 
-    $("#tv").oninput =
-      calculate;
+/* =========================================================
+   FECHAS
+========================================================= */
 
-    $("#tf").oninput =
-      calculate;
+function dateUI() {
 
-    $("#tt").oninput =
-      calculate;
+  openModal(`
+    <h2>📅 Diferencia de fechas</h2>
 
+    <div class="form-grid">
 
-    calculate();
-
-  }
-
-
-  /* =====================================================
-     MONEDAS
-     ===================================================== */
-
-  async function currency() {
-
-    openModal(
-      "💱 Monedas",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Cantidad
-          </label>
-
-          <input
-            id="mv"
-            type="number"
-            value="100"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            De
-          </label>
-
-          <select id="mf">
-
-            <option>PEN</option>
-            <option>USD</option>
-            <option>EUR</option>
-            <option>GBP</option>
-
-          </select>
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            A
-          </label>
-
-          <select id="mt">
-
-            <option>USD</option>
-            <option>PEN</option>
-            <option>EUR</option>
-            <option>GBP</option>
-
-          </select>
-
-        </div>
-
+      <div class="form-group">
+        <label>Fecha inicial</label>
+        <input id="dateA" type="date">
       </div>
 
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="mgo"
-        >
-          Consultar tasa
-        </button>
-
+      <div class="form-group">
+        <label>Fecha final</label>
+        <input id="dateB" type="date">
       </div>
 
+    </div>
 
-      <div
-        id="mout"
-        class="result-box"
+    <br>
+
+    <button class="form-button" id="dateBtn">
+      Calcular
+    </button>
+
+    <div id="dateResult"></div>
+  `);
+
+  document
+    .getElementById("dateBtn")
+    .addEventListener("click", () => {
+
+      const a =
+        new Date(document.getElementById("dateA").value);
+
+      const b =
+        new Date(document.getElementById("dateB").value);
+
+      if (
+        Number.isNaN(a.getTime()) ||
+        Number.isNaN(b.getTime())
+      ) {
+        showToast("Selecciona ambas fechas");
+        return;
+      }
+
+      const days =
+        Math.abs(
+          b.getTime() - a.getTime()
+        ) / 86400000;
+
+      document.getElementById("dateResult").innerHTML = `
+        <div class="result">
+          <div class="big-result">
+            ${Math.round(days)}
+          </div>
+
+          días de diferencia
+        </div>
+      `;
+
+    });
+
+}
+
+
+/* =========================================================
+   EDAD
+========================================================= */
+
+function ageUI() {
+
+  openModal(`
+    <h2>🎂 Calculadora de edad</h2>
+
+    <div class="form-group">
+      <label>Fecha de nacimiento</label>
+      <input id="birthDate" type="date">
+    </div>
+
+    <br>
+
+    <button class="form-button" id="ageBtn">
+      Calcular edad
+    </button>
+
+    <div id="ageResult"></div>
+  `);
+
+  document
+    .getElementById("ageBtn")
+    .addEventListener("click", () => {
+
+      const birth =
+        new Date(
+          document.getElementById("birthDate").value
+        );
+
+      if (Number.isNaN(birth.getTime())) {
+        showToast("Selecciona una fecha");
+        return;
+      }
+
+      const now = new Date();
+
+      let age =
+        now.getFullYear() -
+        birth.getFullYear();
+
+      const month =
+        now.getMonth() -
+        birth.getMonth();
+
+      if (
+        month < 0 ||
+        (
+          month === 0 &&
+          now.getDate() < birth.getDate()
+        )
+      ) {
+        age--;
+      }
+
+      document.getElementById("ageResult").innerHTML = `
+        <div class="result">
+          Tu edad aproximada es:
+
+          <div class="big-result">
+            ${age} años
+          </div>
+        </div>
+      `;
+
+    });
+
+}
+
+
+/* =========================================================
+   TEMPORIZADOR
+========================================================= */
+
+let timerInterval = null;
+let timerEnd = 0;
+
+function timerUI() {
+
+  openModal(`
+    <h2>⏳ Temporizador</h2>
+
+    <div class="form-group">
+      <label>Segundos</label>
+      <input
+        id="timerSeconds"
+        type="number"
+        min="1"
+        value="60"
       >
-        Se necesita conexión para consultar
-        una tasa actualizada.
-      </div>
+    </div>
 
-      `
-    );
+    <br>
 
+    <button class="form-button" id="timerStart">
+      Iniciar
+    </button>
 
-    $("#mgo").onclick =
-      async () => {
+    <button class="form-button" id="timerStop">
+      Detener
+    </button>
 
-        const from =
-          $("#mf").value;
-
-        const to =
-          $("#mt").value;
-
-        const value =
-          Number(
-            $("#mv").value
-          );
-
-
-        try {
-
-          const response =
-            await fetch(
-              `https://open.er-api.com/v6/latest/${from}`
-            );
-
-
-          const data =
-            await response.json();
-
-
-          if (
-            data.result !==
-            "success"
-          ) {
-
-            throw Error();
-
-          }
-
-
-          localStorage.setItem(
-            "utilhub-rate-" + from,
-
-            JSON.stringify({
-              time: Date.now(),
-              rates: data.rates
-            })
-          );
-
-
-          $("#mout")
-            .textContent =
-            `${money(value)} ${from} ≈ ${money(value * data.rates[to])} ${to}`;
-
-        } catch {
-
-          try {
-
-            const cached =
-              JSON.parse(
-                localStorage.getItem(
-                  "utilhub-rate-" + from
-                )
-              );
-
-
-            if (
-              !cached ||
-              !cached.rates ||
-              !cached.rates[to]
-            ) {
-
-              throw Error();
-
-            }
-
-
-            $("#mout")
-              .textContent =
-              `Última tasa guardada: ${money(value * cached.rates[to])} ${to}`;
-
-          } catch {
-
-            $("#mout")
-              .textContent =
-              "No fue posible consultar ni recuperar una tasa guardada.";
-
-          }
-
-        }
-
-      };
-
-  }
-
-
-  /* =====================================================
-     FECHAS
-     ===================================================== */
-
-  function date() {
-
-    openModal(
-      "📅 Diferencia de fechas",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Fecha inicial
-          </label>
-
-          <input
-            id="da"
-            type="date"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Fecha final
-          </label>
-
-          <input
-            id="db"
-            type="date"
-          >
-
-        </div>
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="dago"
-        >
-          Calcular
-        </button>
-
-      </div>
-
+    <div class="result">
 
       <div
-        id="daout"
-        class="result-box"
-      ></div>
-
-      `
-    );
-
-
-    const today =
-      new Date();
-
-
-    $("#da")
-      .valueAsDate =
-      new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-      );
-
-
-    $("#db")
-      .valueAsDate =
-      new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-      );
-
-
-    $("#dago").onclick =
-      () => {
-
-        const first =
-          new Date(
-            $("#da").value +
-            "T00:00:00"
-          );
-
-        const second =
-          new Date(
-            $("#db").value +
-            "T00:00:00"
-          );
-
-
-        const days =
-          Math.round(
-            Math.abs(
-              second - first
-            ) /
-            86400000
-          );
-
-
-        $("#daout")
-          .textContent =
-          `Diferencia: ${days} día(s)`;
-
-      };
-
-  }
-
-
-  /* =====================================================
-     EDAD
-     ===================================================== */
-
-  function age() {
-
-    openModal(
-      "🎂 Edad",
-
-      `
-
-      <div class="field">
-
-        <label>
-          Fecha de nacimiento
-        </label>
-
-        <input
-          id="birth"
-          type="date"
-        >
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="agego"
-        >
-          Calcular
-        </button>
-
-      </div>
-
-
-      <div
-        id="ageout"
-        class="result-box"
-      ></div>
-
-      `
-    );
-
-
-    $("#agego").onclick =
-      () => {
-
-        const birth =
-          new Date(
-            $("#birth").value +
-            "T00:00:00"
-          );
-
-
-        const now =
-          new Date();
-
-
-        if (
-          Number.isNaN(
-            birth.getTime()
-          )
-        ) {
-
-          return;
-
-        }
-
-
-        let years =
-          now.getFullYear() -
-          birth.getFullYear();
-
-
-        const month =
-          now.getMonth() -
-          birth.getMonth();
-
-
-        if (
-          month < 0 ||
-          (
-            month === 0 &&
-            now.getDate() <
-            birth.getDate()
-          )
-        ) {
-
-          years--;
-
-        }
-
-
-        $("#ageout")
-          .textContent =
-          `Edad: ${years} años`;
-
-      };
-
-  }
-
-
-  /* =====================================================
-     TEMPORIZADOR
-     ===================================================== */
-
-  function timerTool() {
-
-    openModal(
-      "⏱️ Temporizador",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Minutos
-          </label>
-
-          <input
-            id="tm"
-            type="number"
-            min="0"
-            value="1"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Segundos
-          </label>
-
-          <input
-            id="ts"
-            type="number"
-            min="0"
-            value="0"
-          >
-
-        </div>
-
-      </div>
-
-
-      <div
-        id="tmout"
-        class="result-box"
+        id="timerDisplay"
+        class="big-result"
       >
         00:00
       </div>
 
+    </div>
+  `);
 
-      <div class="modal-actions">
+  const display =
+    document.getElementById("timerDisplay");
 
-        <button
-          class="primary"
-          id="tmstart"
-        >
-          Iniciar
-        </button>
+  document
+    .getElementById("timerStart")
+    .addEventListener("click", () => {
 
-        <button
-          class="secondary"
-          id="tmstop"
-        >
-          Detener
-        </button>
-
-      </div>
-
-      `
-    );
-
-
-    const output =
-      $("#tmout");
-
-
-    function draw() {
-
-      const remaining =
-        Math.max(
-          0,
-          timer.end -
-          Date.now()
-        );
-
+      clearInterval(timerInterval);
 
       const seconds =
-        Math.ceil(
-          remaining /
-          1000
+        Number(
+          document.getElementById("timerSeconds").value
         );
 
+      timerEnd =
+        Date.now() + seconds * 1000;
 
-      output.textContent =
-        `${String(
-          Math.floor(
-            seconds / 60
-          )
-        ).padStart(2, "0")}:${String(
-          seconds % 60
-        ).padStart(2, "0")}`;
+      timerInterval =
+        setInterval(() => {
 
-
-      if (
-        remaining <= 0
-      ) {
-
-        clearInterval(
-          timer.interval
-        );
-
-        toast(
-          "Temporizador terminado"
-        );
-
-      }
-
-    }
-
-
-    $("#tmstart").onclick =
-      () => {
-
-        const duration =
-          (
-            Number(
-              $("#tm").value
-            ) *
-            60 +
-            Number(
-              $("#ts").value
-            )
-          ) *
-          1000;
-
-
-        if (
-          duration <= 0
-        ) {
-
-          return;
-
-        }
-
-
-        timer.duration =
-          duration;
-
-
-        timer.end =
-          Date.now() +
-          duration;
-
-
-        clearInterval(
-          timer.interval
-        );
-
-
-        timer.interval =
-          setInterval(
-            draw,
-            200
-          );
-
-
-        draw();
-
-      };
-
-
-    $("#tmstop").onclick =
-      () => {
-
-        clearInterval(
-          timer.interval
-        );
-
-      };
-
-  }
-
-
-  /* =====================================================
-     CRONÓMETRO
-     ===================================================== */
-
-  function stopwatchTool() {
-
-    openModal(
-      "⏲️ Cronómetro",
-
-      `
-
-      <div
-        id="swout"
-        class="result-box"
-      >
-        00:00.00
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="swstart"
-        >
-          Iniciar
-        </button>
-
-        <button
-          class="secondary"
-          id="swlap"
-        >
-          Pausa
-        </button>
-
-        <button
-          class="secondary"
-          id="swreset"
-        >
-          Reiniciar
-        </button>
-
-      </div>
-
-      `
-    );
-
-
-    const output =
-      $("#swout");
-
-
-    function draw() {
-
-      const milliseconds =
-        stopwatch.elapsed +
-        (
-          stopwatch.start
-            ? Date.now() -
-              stopwatch.start
-            : 0
-        );
-
-
-      output.textContent =
-        `${String(
-          Math.floor(
-            milliseconds / 60000
-          )
-        ).padStart(2, "0")}:${String(
-          Math.floor(
-            milliseconds / 1000
-          ) % 60
-        ).padStart(2, "0")}.${String(
-          Math.floor(
-            milliseconds / 10
-          ) % 100
-        ).padStart(2, "0")}`;
-
-    }
-
-
-    $("#swstart").onclick =
-      () => {
-
-        if (
-          !stopwatch.start
-        ) {
-
-          stopwatch.start =
-            Date.now();
-
-
-          stopwatch.interval =
-            setInterval(
-              draw,
-              50
+          const remaining =
+            Math.max(
+              0,
+              timerEnd - Date.now()
             );
 
-        }
+          const totalSeconds =
+            Math.ceil(remaining / 1000);
 
-      };
+          const min =
+            Math.floor(totalSeconds / 60);
 
+          const sec =
+            totalSeconds % 60;
 
-    $("#swlap").onclick =
-      () => {
+          display.textContent =
+            `${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
 
-        if (
-          stopwatch.start
-        ) {
+          if (remaining <= 0) {
 
-          stopwatch.elapsed +=
-            Date.now() -
-            stopwatch.start;
+            clearInterval(timerInterval);
 
+            showToast("⏰ ¡Tiempo terminado!");
 
-          stopwatch.start =
-            0;
+          }
 
+        }, 100);
 
-          clearInterval(
-            stopwatch.interval
-          );
-
-        }
-
-      };
+    });
 
 
-    $("#swreset").onclick =
-      () => {
+  document
+    .getElementById("timerStop")
+    .addEventListener("click", () => {
 
-        stopwatch.start =
-          0;
+      clearInterval(timerInterval);
 
-        stopwatch.elapsed =
-          0;
+      showToast("Temporizador detenido");
 
-        clearInterval(
-          stopwatch.interval
-        );
+    });
 
-        draw();
-
-      };
-
-  }
+}
 
 
-  /* =====================================================
-     NOTAS
-     ===================================================== */
+/* =========================================================
+   CRONÓMETRO
+========================================================= */
 
-  function notes() {
+let stopwatchInterval = null;
+let stopwatchStart = 0;
+let stopwatchElapsed = 0;
 
-    openModal(
-      "📝 Notas",
+function stopwatchUI() {
 
-      `
+  openModal(`
+    <h2>⏱️ Cronómetro</h2>
 
-      <div class="field">
-
-        <label>
-          Tu nota
-        </label>
-
-        <textarea
-          id="noteIn"
-          placeholder="Escribe aquí..."
-        >${escapeHTML(
-          state.notes
-        )}</textarea>
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="noteSave"
-        >
-          Guardar
-        </button>
-
-      </div>
-
-      `
-    );
-
-
-    $("#noteSave").onclick =
-      () => {
-
-        state.notes =
-          $("#noteIn").value;
-
-        save();
-
-        toast(
-          "Nota guardada"
-        );
-
-      };
-
-  }
-
-
-  /* =====================================================
-     LISTAS
-     ===================================================== */
-
-  function listTool(
-    type,
-    title,
-    emoji,
-    placeholder
-  ) {
-
-    openModal(
-      `${emoji} ${title}`,
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field full">
-
-          <label>
-            Nuevo elemento
-          </label>
-
-          <input
-            id="liIn"
-            placeholder="${placeholder}"
-          >
-
-        </div>
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="liAdd"
-        >
-          Agregar
-        </button>
-
-      </div>
-
+    <div class="result">
 
       <div
-        id="liList"
-        class="list"
-      ></div>
-
-      `
-    );
-
-
-    const array =
-      state[type];
-
-    const list =
-      $("#liList");
-
-
-    function draw() {
-
-      list.innerHTML =
-        array.length
-
-          ? array
-              .map(
-                (item, index) => `
-
-                  <div
-                    class="list-item"
-                  >
-
-                    <span>
-                      ${escapeHTML(item)}
-                    </span>
-
-                    <button
-                      class="secondary"
-                      data-del="${index}"
-                    >
-                      Eliminar
-                    </button>
-
-                  </div>
-
-                `
-              )
-              .join("")
-
-          : `
-              <p class="muted">
-                Lista vacía.
-              </p>
-            `;
-
-
-      $$("#liList [data-del]")
-        .forEach(button => {
-
-          button.onclick =
-            () => {
-
-              array.splice(
-                Number(
-                  button.dataset.del
-                ),
-                1
-              );
-
-
-              save();
-
-              draw();
-
-            };
-
-        });
-
-    }
-
-
-    $("#liAdd").onclick =
-      () => {
-
-        const value =
-          $("#liIn")
-            .value
-            .trim();
-
-
-        if (!value) {
-          return;
-        }
-
-
-        array.push(
-          value
-        );
-
-
-        $("#liIn")
-          .value = "";
-
-
-        save();
-
-        draw();
-
-      };
-
-
-    draw();
-
-  }
-
-
-  function tasks() {
-
-    listTool(
-      "tasks",
-      "Tareas",
-      "✅",
-      "Ej.: terminar proyecto"
-    );
-
-  }
-
-
-  function shopping() {
-
-    listTool(
-      "shopping",
-      "Compras",
-      "🛒",
-      "Ej.: arroz"
-    );
-
-  }
-
-
-  function study() {
-
-    listTool(
-      "study",
-      "Estudio",
-      "📚",
-      "Ej.: repasar ciencias"
-    );
-
-  }
-
-
-  /* =====================================================
-     CONTRASEÑAS
-     ===================================================== */
-
-  function password() {
-
-    openModal(
-      "🔐 Generador de contraseñas",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Longitud
-          </label>
-
-          <input
-            id="pl"
-            type="number"
-            min="6"
-            max="128"
-            value="18"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Opciones
-          </label>
-
-          <select id="ps">
-
-            <option value="all">
-              Letras + números + símbolos
-            </option>
-
-            <option value="alnum">
-              Letras + números
-            </option>
-
-            <option value="letters">
-              Solo letras
-            </option>
-
-          </select>
-
-        </div>
-
+        id="stopwatchDisplay"
+        class="big-result"
+      >
+        00:00:00
       </div>
 
+    </div>
 
-      <div class="modal-actions">
+    <br>
 
-        <button
-          class="primary"
-          id="pgen"
-        >
-          Generar
-        </button>
+    <button class="form-button" id="swStart">
+      Iniciar
+    </button>
 
-        <button
-          class="secondary"
-          id="pcopy"
-        >
-          Copiar
-        </button>
+    <button class="form-button" id="swPause">
+      Pausar
+    </button>
 
-      </div>
+    <button class="form-button" id="swReset">
+      Reiniciar
+    </button>
+  `);
+
+  const display =
+    document.getElementById("stopwatchDisplay");
+
+  function update() {
+
+    const elapsed =
+      stopwatchElapsed +
+      (
+        stopwatchStart
+          ? Date.now() - stopwatchStart
+          : 0
+      );
+
+    const total =
+      Math.floor(elapsed / 1000);
+
+    const h =
+      Math.floor(total / 3600);
+
+    const m =
+      Math.floor((total % 3600) / 60);
+
+    const s =
+      total % 60;
+
+    display.textContent =
+      `${String(h).padStart(2,"0")}:` +
+      `${String(m).padStart(2,"0")}:` +
+      `${String(s).padStart(2,"0")}`;
+
+  }
+
+  document
+    .getElementById("swStart")
+    .addEventListener("click", () => {
+
+      if (stopwatchStart) return;
+
+      stopwatchStart =
+        Date.now();
+
+      stopwatchInterval =
+        setInterval(update, 250);
+
+    });
 
 
-      <div
-        id="pout"
-        class="result-box"
-      ></div>
+  document
+    .getElementById("swPause")
+    .addEventListener("click", () => {
 
-      `
-    );
+      if (!stopwatchStart) return;
 
+      stopwatchElapsed +=
+        Date.now() - stopwatchStart;
 
-    function generate() {
+      stopwatchStart = 0;
 
-      const sets = {
+      clearInterval(stopwatchInterval);
 
-        all:
-          "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*_-",
+      update();
 
-        alnum:
-          "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789",
-
-        letters:
-          "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-
-      };
+    });
 
 
-      const characters =
-        sets[
-          $("#ps").value
-        ];
+  document
+    .getElementById("swReset")
+    .addEventListener("click", () => {
 
+      stopwatchStart = 0;
+      stopwatchElapsed = 0;
+
+      clearInterval(stopwatchInterval);
+
+      update();
+
+    });
+
+}
+
+
+/* =========================================================
+   CONTRASEÑAS
+========================================================= */
+
+function secureRandom(max) {
+
+  const array =
+    new Uint32Array(1);
+
+  crypto.getRandomValues(array);
+
+  return array[0] % max;
+}
+
+
+function generatePassword(length) {
+
+  const chars =
+    "ABCDEFGHJKLMNPQRSTUVWXYZ" +
+    "abcdefghijkmnopqrstuvwxyz" +
+    "23456789!@#$%&*";
+
+  let password = "";
+
+  for (let i = 0; i < length; i++) {
+
+    password +=
+      chars[secureRandom(chars.length)];
+
+  }
+
+  return password;
+}
+
+
+function passwordUI() {
+
+  openModal(`
+    <h2>🔐 Generador de contraseñas</h2>
+
+    <div class="form-group">
+
+      <label>
+        Longitud
+      </label>
+
+      <input
+        id="passwordLength"
+        type="number"
+        min="6"
+        max="64"
+        value="16"
+      >
+
+    </div>
+
+    <br>
+
+    <button
+      class="form-button"
+      id="passwordBtn"
+    >
+      Generar
+    </button>
+
+    <div id="passwordResult"></div>
+  `);
+
+  document
+    .getElementById("passwordBtn")
+    .addEventListener("click", () => {
 
       const length =
         Math.min(
-          128,
+          64,
           Math.max(
             6,
             Number(
-              $("#pl").value
-            ) || 18
-          )
-        );
-
-
-      const randomValues =
-        new Uint32Array(
-          length
-        );
-
-
-      crypto.getRandomValues(
-        randomValues
-      );
-
-
-      const passwordValue =
-        Array
-          .from(
-            randomValues,
-            number =>
-              characters[
-                number %
-                characters.length
-              ]
-          )
-          .join("");
-
-
-      $("#pout")
-        .textContent =
-        passwordValue;
-
-    }
-
-
-    $("#pgen").onclick =
-      generate;
-
-
-    $("#pcopy").onclick =
-      () => {
-
-        navigator.clipboard
-          ?.writeText(
-            $("#pout").textContent
-          )
-          .then(
-            () =>
-              toast(
-                "Contraseña copiada"
-              )
-          );
-
-      };
-
-
-    generate();
-
-  }
-
-
-  /* =====================================================
-     ALEATORIO
-     ===================================================== */
-
-  function randomTool() {
-
-    openModal(
-      "🎲 Aleatorio",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Mínimo
-          </label>
-
-          <input
-            id="rn1"
-            type="number"
-            value="1"
-          >
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Máximo
-          </label>
-
-          <input
-            id="rn2"
-            type="number"
-            value="100"
-          >
-
-        </div>
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="rngo"
-        >
-          Número aleatorio
-        </button>
-
-        <button
-          class="secondary"
-          id="dicego"
-        >
-          🎲 Dado
-        </button>
-
-      </div>
-
-
-      <div
-        id="rnout"
-        class="result-box"
-      ></div>
-
-      `
-    );
-
-
-    $("#rngo").onclick =
-      () => {
-
-        let min =
-          Number(
-            $("#rn1").value
-          );
-
-        let max =
-          Number(
-            $("#rn2").value
-          );
-
-
-        if (
-          min > max
-        ) {
-
-          [
-            min,
-            max
-          ] = [
-            max,
-            min
-          ];
-
-        }
-
-
-        const result =
-          Math.floor(
-            Math.random() *
-            (
-              max -
-              min +
-              1
+              document.getElementById("passwordLength").value
             )
-          ) +
-          min;
-
-
-        $("#rnout")
-          .textContent =
-          result;
-
-      };
-
-
-    $("#dicego").onclick =
-      () => {
-
-        $("#rnout")
-          .textContent =
-          Math.floor(
-            Math.random() * 6
-          ) + 1;
-
-      };
-
-  }
-
-
-  /* =====================================================
-     QR
-     ===================================================== */
-
-  function qr() {
-
-    openModal(
-      "▦ Código QR",
-
-      `
-
-      <div class="field">
-
-        <label>
-          Texto o enlace
-        </label>
-
-        <input
-          id="qrIn"
-          placeholder="https://ejemplo.com"
-        >
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="qrgo"
-        >
-          Crear QR
-        </button>
-
-      </div>
-
-
-      <div
-        id="qrout"
-        class="result-box"
-      >
-        El QR se genera mediante un servicio
-        externo y necesita internet.
-      </div>
-
-      `
-    );
-
-
-    $("#qrgo").onclick =
-      () => {
-
-        const value =
-          $("#qrIn")
-            .value
-            .trim();
-
-
-        if (!value) {
-          return;
-        }
-
-
-        $("#qrout")
-          .innerHTML = `
-
-            <img
-              style="
-                max-width:260px;
-                width:100%;
-                display:block;
-                margin:auto;
-                border-radius:12px;
-              "
-              alt="Código QR"
-              src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(value)}"
-            >
-
-          `;
-
-      };
-
-  }
-
-
-  /* =====================================================
-     TEXTO
-     ===================================================== */
-
-  function text() {
-
-    openModal(
-      "🔤 Herramientas de texto",
-
-      `
-
-      <div class="field">
-
-        <label>
-          Texto
-        </label>
-
-        <textarea
-          id="tx"
-        ></textarea>
-
-      </div>
-
-
-      <div class="modal-actions">
-
-        <button
-          class="secondary"
-          id="upper"
-        >
-          MAYÚSCULAS
-        </button>
-
-        <button
-          class="secondary"
-          id="lower"
-        >
-          minúsculas
-        </button>
-
-        <button
-          class="secondary"
-          id="copytx"
-        >
-          Copiar
-        </button>
-
-      </div>
-
-
-      <div
-        id="txout"
-        class="result-box"
-      >
-        Caracteres: 0 · Palabras: 0 · Líneas: 0
-      </div>
-
-      `
-    );
-
-
-    function statistics() {
-
-      const value =
-        $("#tx").value;
-
-
-      const words =
-        value.trim()
-          ? value
-              .trim()
-              .split(/\s+/)
-              .length
-          : 0;
-
-
-      const lines =
-        value
-          ? value.split("\n").length
-          : 0;
-
-
-      $("#txout")
-        .textContent =
-        `Caracteres: ${value.length} · Palabras: ${words} · Líneas: ${lines}`;
-
-    }
-
-
-    $("#tx").oninput =
-      statistics;
-
-
-    $("#upper").onclick =
-      () => {
-
-        $("#tx").value =
-          $("#tx")
-            .value
-            .toUpperCase();
-
-        statistics();
-
-      };
-
-
-    $("#lower").onclick =
-      () => {
-
-        $("#tx").value =
-          $("#tx")
-            .value
-            .toLowerCase();
-
-        statistics();
-
-      };
-
-
-    $("#copytx").onclick =
-      () => {
-
-        navigator.clipboard
-          ?.writeText(
-            $("#tx").value
           )
-          .then(
-            () =>
-              toast(
-                "Texto copiado"
-              )
-          );
+        );
 
-      };
+      const password =
+        generatePassword(length);
 
-  }
+      document.getElementById("passwordResult").innerHTML = `
+        <div class="result">
 
+          <div class="big-result">
+            ${password}
+          </div>
 
-  /* =====================================================
-     DICCIONARIO
-     ===================================================== */
+          <br>
 
-  async function dictionary() {
-
-    openModal(
-      "📖 Diccionario",
-
-      `
-
-      <div class="form-grid">
-
-        <div class="field">
-
-          <label>
-            Idioma
-          </label>
-
-          <select id="dictLang">
-
-            <option value="es">
-              Español
-            </option>
-
-            <option value="en">
-              Inglés
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <div class="field">
-
-          <label>
-            Palabra
-          </label>
-
-          <input
-            id="dictWord"
-            placeholder="Escribe una palabra"
+          <button
+            class="form-button"
+            id="copyPassword"
           >
+            Copiar
+          </button>
 
         </div>
+      `;
 
+      document
+        .getElementById("copyPassword")
+        .addEventListener("click", async () => {
+
+          await navigator.clipboard.writeText(password);
+
+          showToast("Contraseña copiada");
+
+        });
+
+    });
+
+}
+
+
+/* =========================================================
+   ALEATORIO
+========================================================= */
+
+function randomUI() {
+
+  openModal(`
+    <h2>🎲 Aleatorio</h2>
+
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Mínimo</label>
+        <input id="randomMin" type="number" value="1">
       </div>
 
-
-      <div class="modal-actions">
-
-        <button
-          class="primary"
-          id="dictGo"
-        >
-          Buscar
-        </button>
-
+      <div class="form-group">
+        <label>Máximo</label>
+        <input id="randomMax" type="number" value="100">
       </div>
 
+    </div>
 
-      <div
-        id="dictOut"
-        class="result-box"
+    <br>
+
+    <button
+      class="form-button"
+      id="randomBtn"
+    >
+      Generar
+    </button>
+
+    <button
+      class="form-button"
+      id="diceBtn"
+    >
+      🎲 Lanzar dado
+    </button>
+
+    <div id="randomResult"></div>
+  `);
+
+  document
+    .getElementById("randomBtn")
+    .addEventListener("click", () => {
+
+      const min =
+        Number(
+          document.getElementById("randomMin").value
+        );
+
+      const max =
+        Number(
+          document.getElementById("randomMax").value
+        );
+
+      const result =
+        Math.floor(
+          Math.random() *
+          (max - min + 1)
+        ) + min;
+
+      document.getElementById("randomResult").innerHTML = `
+        <div class="result">
+          <div class="big-result">${result}</div>
+        </div>
+      `;
+
+    });
+
+
+  document
+    .getElementById("diceBtn")
+    .addEventListener("click", () => {
+
+      const result =
+        Math.floor(
+          Math.random() * 6
+        ) + 1;
+
+      document.getElementById("randomResult").innerHTML = `
+        <div class="result">
+          🎲 Resultado:
+
+          <div class="big-result">
+            ${result}
+          </div>
+        </div>
+      `;
+
+    });
+
+}
+
+
+/* =========================================================
+   QR
+========================================================= */
+
+function qrUI() {
+
+  openModal(`
+    <h2>▦ Generador QR</h2>
+
+    <div class="form-group">
+
+      <label>
+        Texto o enlace
+      </label>
+
+      <input
+        id="qrText"
+        placeholder="Escribe algo..."
       >
-        Consulta un diccionario público.
-        Necesita internet.
-      </div>
 
-      `
-    );
+    </div>
 
+    <br>
 
-    $("#dictGo").onclick =
-      async () => {
+    <button
+      class="form-button"
+      id="qrBtn"
+    >
+      Crear QR
+    </button>
 
-        const language =
-          $("#dictLang").value;
+    <div
+      id="qrResult"
+      class="result"
+    ></div>
+  `);
 
-        const word =
-          $("#dictWord")
-            .value
-            .trim();
+  document
+    .getElementById("qrBtn")
+    .addEventListener("click", () => {
 
+      const text =
+        document.getElementById("qrText").value.trim();
 
-        if (!word) {
-          return;
-        }
-
-
-        $("#dictOut")
-          .textContent =
-          "Buscando...";
-
-
-        try {
-
-          const response =
-            await fetch(
-              `https://api.dictionaryapi.dev/api/v2/entries/${language}/${encodeURIComponent(word)}`
-            );
-
-
-          const data =
-            await response.json();
-
-
-          if (
-            !Array.isArray(data)
-          ) {
-
-            throw Error();
-
-          }
-
-
-          const meanings =
-            data[0]
-              .meanings || [];
-
-
-          const definitions =
-            meanings
-              .slice(0, 3)
-              .map(
-                meaning => `
-
-                  <b>
-                    ${escapeHTML(
-                      meaning.partOfSpeech ||
-                      ""
-                    )}
-                  </b>
-
-                  :
-
-                  ${escapeHTML(
-                    meaning
-                      .definitions?.[0]
-                      ?.definition ||
-                    ""
-                  )}
-
-                `
-              )
-              .join("<br><br>");
-
-
-          $("#dictOut")
-            .innerHTML =
-            definitions ||
-            "Sin definición.";
-
-        } catch {
-
-          $("#dictOut")
-            .textContent =
-            "No se encontró la palabra o no hay conexión.";
-
-        }
-
-      };
-
-  }
-
-
-  /* =====================================================
-     BÚSQUEDA GLOBAL
-     ===================================================== */
-
-  $("#globalSearch")
-    .addEventListener(
-      "input",
-      event => {
-
-        const query =
-          event.target.value;
-
-
-        renderTools(
-          query
-        );
-
-
-        const search =
-          query
-            .trim()
-            .toLowerCase();
-
-
-        $("#searchResults")
-          .innerHTML =
-          search
-
-            ? tools
-                .filter(
-                  tool =>
-                    tool
-                      .slice(0, 5)
-                      .join(" ")
-                      .toLowerCase()
-                      .includes(search)
-                )
-                .slice(0, 6)
-                .map(
-                  tool => `
-
-                    <button
-                      data-search-tool="${tool[0]}"
-                    >
-                      ${tool[1]}
-                      ${escapeHTML(tool[2])}
-                      —
-                      ${escapeHTML(tool[3])}
-                    </button>
-
-                  `
-                )
-                .join("")
-
-            : "";
-
-
-        $$("#searchResults [data-search-tool]")
-          .forEach(button => {
-
-            button.onclick =
-              () => {
-
-                openTool(
-                  button.dataset.searchTool
-                );
-
-              };
-
-          });
-
-      }
-    );
-
-
-  /* =====================================================
-     TEMA
-     ===================================================== */
-
-  $("#themeBtn").onclick =
-    () => {
-
-      state.theme =
-        state.theme === "dark"
-          ? "light"
-          : "dark";
-
-
-      applyPreferences();
-
-      save();
-
-    };
-
-
-  /* =====================================================
-     ANIMACIONES
-     ===================================================== */
-
-  $("#animationBtn").onclick =
-    () => {
-
-      state.animations =
-        !state.animations;
-
-
-      applyPreferences();
-
-      save();
-
-    };
-
-
-  /* =====================================================
-     SORPRÉNDEME
-     ===================================================== */
-
-  $("#quickRandom").onclick =
-    () => {
-
-      openTool(
-        "random"
-      );
-
-    };
-
-
-  /* =====================================================
-     EXPORTAR
-     ===================================================== */
-
-  $("#exportBtn").onclick =
-    () => {
-
-      const blob =
-        new Blob(
-          [
-            JSON.stringify(
-              state,
-              null,
-              2
-            )
-          ],
-          {
-            type:
-              "application/json"
-          }
-        );
-
-
-      const link =
-        document.createElement(
-          "a"
-        );
-
-
-      link.href =
-        URL.createObjectURL(
-          blob
-        );
-
-
-      link.download =
-        "utilhub-v14-datos.json";
-
-
-      link.click();
-
-
-      URL.revokeObjectURL(
-        link.href
-      );
-
-    };
-
-
-  /* =====================================================
-     IMPORTAR
-     ===================================================== */
-
-  $("#importBtn").onclick =
-    () => {
-
-      $("#importFile").click();
-
-    };
-
-
-  $("#importFile")
-    .onchange =
-    async event => {
-
-      try {
-
-        const file =
-          event.target.files[0];
-
-
-        if (!file) {
-          return;
-        }
-
-
-        const imported =
-          JSON.parse(
-            await file.text()
-          );
-
-
-        state = {
-          ...defaultState,
-          ...imported
-        };
-
-
-        save();
-
-        applyPreferences();
-
-        renderTools();
-
-        toast(
-          "Datos importados"
-        );
-
-      } catch {
-
-        toast(
-          "Archivo no válido"
-        );
-
-      }
-
-    };
-
-
-  /* =====================================================
-     RESTABLECER
-     ===================================================== */
-
-  $("#resetBtn").onclick =
-    () => {
-
-      if (
-        confirm(
-          "¿Borrar los datos locales de ÚtilHub?"
-        )
-      ) {
-
-        localStorage.removeItem(
-          STORAGE_KEY
-        );
-
-
-        state = {
-          ...defaultState
-        };
-
-
-        applyPreferences();
-
-        renderTools();
-
-        save();
-
-        toast(
-          "Datos restablecidos"
-        );
-
-      }
-
-    };
-
-
-  /* =====================================================
-     PREFERENCIAS
-     ===================================================== */
-
-  function applyPreferences() {
-
-    document.body.classList.toggle(
-      "light",
-      state.theme === "light"
-    );
-
-
-    document.body.classList.toggle(
-      "no-animation",
-      !state.animations
-    );
-
-
-    $("#themeBtn")
-      .textContent =
-      state.theme === "dark"
-        ? "☾"
-        : "☀";
-
-
-    $("#animationBtn")
-      .textContent =
-      `✨ Animaciones: ${
-        state.animations
-          ? "activadas"
-          : "desactivadas"
-      }`;
-
-  }
-
-
-  /* =====================================================
-     CONEXIÓN
-     ===================================================== */
-
-  window.addEventListener(
-    "online",
-    updateStats
-  );
-
-
-  window.addEventListener(
-    "offline",
-    updateStats
-  );
-
-
-  /* =====================================================
-     INSTALACIÓN PWA
-     ===================================================== */
-
-  window.addEventListener(
-    "beforeinstallprompt",
-    event => {
-
-      event.preventDefault();
-
-      installPrompt =
-        event;
-
-      $("#installBtn")
-        .hidden =
-        false;
-
-    }
-  );
-
-
-  $("#installBtn").onclick =
-    async () => {
-
-      if (!installPrompt) {
+      if (!text) {
+        showToast("Escribe un texto");
         return;
       }
 
+      const url =
+        "https://api.qrserver.com/v1/create-qr-code/" +
+        `?size=300x300&data=${encodeURIComponent(text)}`;
 
-      installPrompt.prompt();
+      document.getElementById("qrResult").innerHTML = `
+        <img
+          src="${url}"
+          alt="Código QR"
+          style="
+            max-width:300px;
+            width:100%;
+            border-radius:15px;
+            background:white;
+            padding:10px;
+          "
+        >
+      `;
+
+    });
+
+}
 
 
-      await installPrompt
-        .userChoice;
+/* =========================================================
+   TEXTO
+========================================================= */
+
+function textUI() {
+
+  openModal(`
+    <h2>🔤 Herramientas de texto</h2>
+
+    <div class="form-group">
+
+      <label>
+        Texto
+      </label>
+
+      <textarea
+        id="textInput"
+        placeholder="Escribe aquí..."
+      ></textarea>
+
+    </div>
+
+    <br>
+
+    <button class="form-button" id="upperBtn">
+      MAYÚSCULAS
+    </button>
+
+    <button class="form-button" id="lowerBtn">
+      minúsculas
+    </button>
+
+    <button class="form-button" id="countBtn">
+      Contar
+    </button>
+
+    <div id="textResult"></div>
+  `);
+
+  const input =
+    document.getElementById("textInput");
+
+  const result =
+    document.getElementById("textResult");
 
 
-      installPrompt =
-        null;
+  document
+    .getElementById("upperBtn")
+    .addEventListener("click", () => {
+
+      input.value =
+        input.value.toUpperCase();
+
+    });
 
 
-      $("#installBtn")
-        .hidden =
-        true;
+  document
+    .getElementById("lowerBtn")
+    .addEventListener("click", () => {
 
-    };
+      input.value =
+        input.value.toLowerCase();
+
+    });
 
 
-  /* =====================================================
-     SERVICE WORKER
-     ===================================================== */
+  document
+    .getElementById("countBtn")
+    .addEventListener("click", () => {
 
-  if (
-    "serviceWorker" in
-    navigator
-  ) {
+      const text =
+        input.value;
 
-    window.addEventListener(
-      "load",
-      () => {
+      result.innerHTML = `
+        <div class="result">
 
-        navigator.serviceWorker
-          .register(
-            "./sw.js"
-          )
-          .catch(
-            () => {}
+          Caracteres:
+          <b>${text.length}</b>
+
+          <br>
+
+          Palabras:
+          <b>
+            ${
+              text.trim()
+                ? text.trim().split(/\s+/).length
+                : 0
+            }
+          </b>
+
+        </div>
+      `;
+
+    });
+
+}
+
+
+/* =========================================================
+   DICCIONARIO
+========================================================= */
+
+function dictionaryUI() {
+
+  openModal(`
+    <h2>📖 Diccionario</h2>
+
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Palabra</label>
+        <input id="dictWord">
+      </div>
+
+      <div class="form-group">
+        <label>Idioma</label>
+
+        <select id="dictLang">
+          <option value="es">Español</option>
+          <option value="en">Inglés</option>
+        </select>
+
+      </div>
+
+    </div>
+
+    <br>
+
+    <button
+      class="form-button"
+      id="dictBtn"
+    >
+      Buscar
+    </button>
+
+    <div id="dictResult"></div>
+  `);
+
+
+  document
+    .getElementById("dictBtn")
+    .addEventListener("click", async () => {
+
+      const word =
+        document.getElementById("dictWord")
+          .value
+          .trim();
+
+      const lang =
+        document.getElementById("dictLang")
+          .value;
+
+      const result =
+        document.getElementById("dictResult");
+
+      if (!word) {
+        showToast("Escribe una palabra");
+        return;
+      }
+
+      result.innerHTML =
+        `<div class="result">Buscando...</div>`;
+
+      try {
+
+        const response =
+          await fetch(
+            `https://api.dictionaryapi.dev/api/v2/entries/${lang}/${encodeURIComponent(word)}`
           );
 
+        if (!response.ok) {
+          throw new Error();
+        }
+
+        const data =
+          await response.json();
+
+        const meanings =
+          data[0].meanings || [];
+
+        result.innerHTML = `
+          <div class="result">
+
+            <h3>${data[0].word}</h3>
+
+            ${meanings.slice(0,4).map(meaning => `
+              <p>
+                <b>${meaning.partOfSpeech || ""}</b>
+              </p>
+
+              ${
+                (meaning.definitions || [])
+                  .slice(0,3)
+                  .map(def => `
+                    <p>
+                      • ${def.definition}
+                    </p>
+                  `)
+                  .join("")
+              }
+
+            `).join("")}
+
+          </div>
+        `;
+
+      } catch {
+
+        result.innerHTML = `
+          <div class="result">
+            No se encontró la palabra o no hay conexión.
+          </div>
+        `;
+
       }
-    );
+
+    });
+
+}
+
+
+/* =========================================================
+   NOTAS
+========================================================= */
+
+function notesUI() {
+
+  openModal(`
+    <h2>📝 Notas</h2>
+
+    <div class="form-group">
+
+      <label>
+        Nueva nota
+      </label>
+
+      <textarea
+        id="noteInput"
+        placeholder="Escribe una nota..."
+      ></textarea>
+
+    </div>
+
+    <br>
+
+    <button
+      class="form-button"
+      id="noteAdd"
+    >
+      Guardar nota
+    </button>
+
+    <div
+      id="notesList"
+      class="list"
+    ></div>
+  `);
+
+  function renderNotes() {
+
+    document.getElementById("notesList").innerHTML =
+      state.notes.map((note, index) => `
+        <div class="list-item">
+
+          <span style="flex:1">
+            ${escapeHTML(note)}
+          </span>
+
+          <button
+            class="form-button"
+            data-delete-note="${index}"
+          >
+            Eliminar
+          </button>
+
+        </div>
+      `).join("");
+
+
+    document
+      .querySelectorAll("[data-delete-note]")
+      .forEach(button => {
+
+        button.addEventListener("click", () => {
+
+          const index =
+            Number(button.dataset.deleteNote);
+
+          state.notes.splice(index,1);
+
+          saveState();
+
+          renderNotes();
+
+        });
+
+      });
 
   }
 
 
-  /* =====================================================
-     INICIALIZACIÓN
-     ===================================================== */
+  document
+    .getElementById("noteAdd")
+    .addEventListener("click", () => {
 
-  renderFilters();
+      const input =
+        document.getElementById("noteInput");
 
-  renderTools();
+      const value =
+        input.value.trim();
 
-  applyPreferences();
+      if (!value) return;
 
-  updateStats();
+      state.notes.unshift(value);
 
-})();
+      saveState();
+
+      input.value = "";
+
+      renderNotes();
+
+      showToast("Nota guardada");
+
+    });
+
+
+  renderNotes();
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHTML(text) {
+
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+/* =========================================================
+   TEMA
+========================================================= */
+
+const themeBtn =
+  document.getElementById("themeBtn");
+
+function applyTheme() {
+
+  document.body.classList.toggle(
+    "light",
+    state.theme === "light"
+  );
+
+  themeBtn.textContent =
+    state.theme === "light"
+      ? "☀"
+      : "☾";
+
+}
+
+themeBtn.addEventListener("click", () => {
+
+  state.theme =
+    state.theme === "dark"
+      ? "light"
+      : "dark";
+
+  saveState();
+  applyTheme();
+
+});
+
+
+/* =========================================================
+   ANIMACIONES
+========================================================= */
+
+const animationBtn =
+  document.getElementById("animationBtn");
+
+function applyAnimations() {
+
+  document.body.classList.toggle(
+    "no-animations",
+    !state.animations
+  );
+
+  animationBtn.textContent =
+    state.animations
+      ? "✨ Animaciones: activadas"
+      : "✨ Animaciones: desactivadas";
+
+}
+
+animationBtn.addEventListener("click", () => {
+
+  state.animations =
+    !state.animations;
+
+  saveState();
+  applyAnimations();
+
+});
+
+
+/* =========================================================
+   BOTÓN SORPRÉNDEME
+========================================================= */
+
+document
+  .getElementById("quickRandom")
+  .addEventListener("click", () => {
+
+    const random =
+      tools[
+        Math.floor(
+          Math.random() * tools.length
+        )
+      ];
+
+    openTool(random.id);
+
+  });
+
+
+/* =========================================================
+   BOTONES DE ORGANIZACIÓN
+========================================================= */
+
+document
+  .querySelectorAll("[data-tool]")
+  .forEach(button => {
+
+    button.addEventListener("click", () => {
+
+      const id =
+        button.dataset.tool;
+
+      if (
+        tools.some(tool => tool.id === id)
+      ) {
+        openTool(id);
+      }
+
+    });
+
+  });
+
+
+/* =========================================================
+   EXPORTAR DATOS
+========================================================= */
+
+document
+  .getElementById("exportBtn")
+  .addEventListener("click", () => {
+
+    const blob =
+      new Blob(
+        [
+          JSON.stringify(
+            state,
+            null,
+            2
+          )
+        ],
+        {
+          type: "application/json"
+        }
+      );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const a =
+      document.createElement("a");
+
+    a.href = url;
+    a.download = "utilhub-datos.json";
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    showToast("Datos exportados");
+
+  });
+
+
+/* =========================================================
+   IMPORTAR DATOS
+========================================================= */
+
+const importFile =
+  document.getElementById("importFile");
+
+document
+  .getElementById("importBtn")
+  .addEventListener("click", () => {
+
+    importFile.click();
+
+  });
+
+
+importFile.addEventListener("change", event => {
+
+  const file =
+    event.target.files[0];
+
+  if (!file) return;
+
+  const reader =
+    new FileReader();
+
+  reader.onload = () => {
+
+    try {
+
+      const imported =
+        JSON.parse(reader.result);
+
+      state = {
+        ...defaultState,
+        ...imported
+      };
+
+      saveState();
+
+      applyTheme();
+      applyAnimations();
+      renderTools();
+      updateStats();
+
+      showToast("Datos importados");
+
+    } catch {
+
+      showToast("Archivo inválido");
+
+    }
+
+  };
+
+  reader.readAsText(file);
+
+});
+
+
+/* =========================================================
+   RESTABLECER
+========================================================= */
+
+document
+  .getElementById("resetBtn")
+  .addEventListener("click", () => {
+
+    const confirmReset =
+      confirm(
+        "¿Quieres borrar los datos locales de ÚtilHub?"
+      );
+
+    if (!confirmReset) return;
+
+    state = {
+      ...defaultState
+    };
+
+    saveState();
+
+    applyTheme();
+    applyAnimations();
+    renderTools();
+    updateStats();
+
+    showToast("Datos restablecidos");
+
+  });
+
+
+/* =========================================================
+   PWA
+========================================================= */
+
+let deferredPrompt = null;
+
+const installBtn =
+  document.getElementById("installBtn");
+
+window.addEventListener(
+  "beforeinstallprompt",
+  event => {
+
+    event.preventDefault();
+
+    deferredPrompt = event;
+
+    installBtn.hidden = false;
+
+  }
+);
+
+
+installBtn.addEventListener("click", async () => {
+
+  if (!deferredPrompt) return;
+
+  deferredPrompt.prompt();
+
+  await deferredPrompt.userChoice;
+
+  deferredPrompt = null;
+
+  installBtn.hidden = true;
+
+});
+
+
+/* =========================================================
+   SERVICE WORKER
+========================================================= */
+
+if ("serviceWorker" in navigator) {
+
+  window.addEventListener("load", () => {
+
+    navigator.serviceWorker
+      .register("./sw.js")
+      .catch(() => {});
+
+  });
+
+}
+
+
+/* =========================================================
+   INICIO
+========================================================= */
+
+renderFilters();
+renderTools();
+
+applyTheme();
+applyAnimations();
+
+updateStats();
