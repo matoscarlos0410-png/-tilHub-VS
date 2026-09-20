@@ -2,17 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-
-  <meta
-    name="theme-color"
-    content="#07111f"
-  >
-
+  <meta name="theme-color" content="#07111f">
   <meta
     name="description"
     content="ÚtilHub V14 — herramientas útiles para tu día a día."
@@ -20,78 +12,34 @@
 
   <title>ÚtilHub V14 — SUPRIME-MASTER-NOVA</title>
 
-  <!-- PWA -->
-  <link
-    rel="manifest"
-    href="manifest.webmanifest"
-  >
-
-  <!-- Icono UH -->
-  <link
-    rel="icon"
-    href="icon.svg"
-    type="image/svg+xml"
-  >
-
-  <!-- Estilos -->
-  <link
-    rel="stylesheet"
-    href="style.css"
-  >
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-  <!-- =====================================================
-       FONDO NOVA
-       ===================================================== -->
+  <div id="nova-bg" aria-hidden="true"></div>
 
-  <div
-    id="nova-bg"
-    aria-hidden="true"
-  ></div>
-
-
-  <!-- =====================================================
-       BARRA SUPERIOR
-       ===================================================== -->
-
+  <!-- CABECERA -->
   <header class="topbar">
 
-    <a
-      class="brand"
-      href="#inicio"
-      aria-label="Ir al inicio de ÚtilHub"
-    >
+    <a class="brand" href="#inicio" aria-label="ÚtilHub inicio">
 
-      <span class="brand-icon">
-        UH
-      </span>
+      <span class="brand-icon">UH</span>
 
       <span>
         <b>ÚtilHub</b>
-
-        <small>
-          V14 · SUPRIME-MASTER-NOVA
-        </small>
+        <small>V14 · SUPRIME-MASTER-NOVA</small>
       </span>
 
     </a>
 
-
     <nav>
 
-      <a href="#herramientas">
-        Herramientas
-      </a>
-
-      <a href="#organiza">
-        Organiza
-      </a>
-
-      <a href="#explora">
-        Explora
-      </a>
+      <a href="#herramientas">Herramientas</a>
+      <a href="#organiza">Organiza</a>
+      <a href="#explora">Explora</a>
 
       <button
         id="themeBtn"
@@ -116,17 +64,9 @@
   </header>
 
 
-  <!-- =====================================================
-       CONTENIDO PRINCIPAL
-       ===================================================== -->
-
   <main id="inicio">
 
-
-    <!-- ===================================================
-         HERO
-         =================================================== -->
-
+    <!-- HERO -->
     <section class="hero">
 
       <div class="hero-copy">
@@ -142,10 +82,9 @@
         </h1>
 
         <p class="hero-text">
-          Calcula, convierte, organiza, crea y busca
-          herramientas prácticas sin cuentas ni backend.
+          Calcula, convierte, organiza, crea y busca herramientas
+          prácticas sin cuentas ni backend.
         </p>
-
 
         <div class="hero-actions">
 
@@ -169,17 +108,10 @@
       </div>
 
 
-      <!-- NÚCLEO NOVA -->
-
-      <div
-        class="nova-core"
-        aria-hidden="true"
-      >
+      <div class="nova-core" aria-hidden="true">
 
         <div class="ring r1"></div>
-
         <div class="ring r2"></div>
-
         <div class="ring r3"></div>
 
         <div class="core">
@@ -191,11 +123,7 @@
     </section>
 
 
-
-    <!-- ===================================================
-         BUSCADOR
-         =================================================== -->
-
+    <!-- BUSCADOR -->
     <section
       class="search-panel"
       aria-label="Buscador de herramientas"
@@ -220,72 +148,33 @@
     </section>
 
 
-
-    <!-- ===================================================
-         ESTADÍSTICAS
-         =================================================== -->
-
+    <!-- ESTADÍSTICAS -->
     <section class="stats">
 
       <div>
-
-        <strong id="toolCount">
-          0
-        </strong>
-
-        <span>
-          herramientas
-        </span>
-
+        <strong id="toolCount">0</strong>
+        <span>herramientas</span>
       </div>
 
-
       <div>
-
-        <strong id="favCount">
-          0
-        </strong>
-
-        <span>
-          favoritos
-        </span>
-
+        <strong id="favCount">0</strong>
+        <span>favoritos</span>
       </div>
 
-
       <div>
-
-        <strong id="recentCount">
-          0
-        </strong>
-
-        <span>
-          recientes
-        </span>
-
+        <strong id="recentCount">0</strong>
+        <span>recientes</span>
       </div>
 
-
       <div>
-
-        <strong id="onlineStatus">
-          ●
-        </strong>
-
-        <span>
-          conexión
-        </span>
-
+        <strong id="onlineStatus">●</strong>
+        <span>conexión</span>
       </div>
 
     </section>
 
 
-
-    <!-- ===================================================
-         HERRAMIENTAS
-         =================================================== -->
-
+    <!-- HERRAMIENTAS -->
     <section
       id="herramientas"
       class="section"
@@ -305,7 +194,6 @@
 
         </div>
 
-
         <div
           class="filters"
           id="filters"
@@ -322,11 +210,7 @@
     </section>
 
 
-
-    <!-- ===================================================
-         ORGANIZACIÓN
-         =================================================== -->
-
+    <!-- ORGANIZACIÓN -->
     <section
       id="organiza"
       class="section"
@@ -351,71 +235,39 @@
 
       <div class="action-grid">
 
-
         <button
           class="action-card"
           data-tool="notes"
         >
-
-          <b>
-            📝 Notas
-          </b>
-
-          <span>
-            Guarda ideas y apuntes.
-          </span>
-
+          <b>📝 Notas</b>
+          <span>Guarda ideas y apuntes.</span>
         </button>
-
 
 
         <button
           class="action-card"
           data-tool="tasks"
         >
-
-          <b>
-            ✅ Tareas
-          </b>
-
-          <span>
-            Controla lo que tienes pendiente.
-          </span>
-
+          <b>✅ Tareas</b>
+          <span>Controla lo que tienes pendiente.</span>
         </button>
-
 
 
         <button
           class="action-card"
           data-tool="shopping"
         >
-
-          <b>
-            🛒 Compras
-          </b>
-
-          <span>
-            Crea tu lista de compras.
-          </span>
-
+          <b>🛒 Compras</b>
+          <span>Crea tu lista de compras.</span>
         </button>
-
 
 
         <button
           class="action-card"
           data-tool="study"
         >
-
-          <b>
-            📚 Estudio
-          </b>
-
-          <span>
-            Organiza materias y sesiones.
-          </span>
-
+          <b>📚 Estudio</b>
+          <span>Organiza materias y sesiones.</span>
         </button>
 
       </div>
@@ -423,11 +275,7 @@
     </section>
 
 
-
-    <!-- ===================================================
-         EXPLORA
-         =================================================== -->
-
+    <!-- EXPLORAR -->
     <section
       id="explora"
       class="section"
@@ -452,26 +300,16 @@
 
       <div class="external-grid">
 
-
         <a
           class="external-card"
           target="_blank"
           rel="noopener"
           href="https://www.google.com/search?q=comida+cerca+de+mi"
         >
-
           🍔
-
-          <b>
-            Comida
-          </b>
-
-          <span>
-            Buscar opciones en la web
-          </span>
-
+          <b>Comida</b>
+          <span>Buscar opciones en la web</span>
         </a>
-
 
 
         <a
@@ -480,19 +318,10 @@
           rel="noopener"
           href="https://www.google.com/search?q=compras"
         >
-
           🛍️
-
-          <b>
-            Compras
-          </b>
-
-          <span>
-            Buscar productos y tiendas
-          </span>
-
+          <b>Compras</b>
+          <span>Buscar productos y tiendas</span>
         </a>
-
 
 
         <a
@@ -501,19 +330,10 @@
           rel="noopener"
           href="https://www.google.com/maps"
         >
-
           📍
-
-          <b>
-            Cerca de mí
-          </b>
-
-          <span>
-            Abrir mapas
-          </span>
-
+          <b>Cerca de mí</b>
+          <span>Abrir mapas</span>
         </a>
-
 
 
         <a
@@ -522,17 +342,9 @@
           rel="noopener"
           href="https://www.google.com"
         >
-
           🌐
-
-          <b>
-            Web
-          </b>
-
-          <span>
-            Abrir búsqueda web
-          </span>
-
+          <b>Web</b>
+          <span>Abrir búsqueda web</span>
         </a>
 
       </div>
@@ -540,11 +352,7 @@
     </section>
 
 
-
-    <!-- ===================================================
-         AJUSTES
-         =================================================== -->
-
+    <!-- AJUSTES -->
     <section
       class="section settings-section"
     >
@@ -568,15 +376,12 @@
 
       <div class="settings-grid">
 
-
         <button
           class="setting"
           id="animationBtn"
         >
           ✨ Animaciones: activadas
         </button>
-
-
 
         <button
           class="setting"
@@ -585,8 +390,6 @@
           ⬇️ Exportar datos
         </button>
 
-
-
         <button
           class="setting"
           id="importBtn"
@@ -594,15 +397,12 @@
           ⬆️ Importar datos
         </button>
 
-
-
         <button
           class="setting danger"
           id="resetBtn"
         >
           ♻️ Restablecer datos
         </button>
-
 
         <input
           id="importFile"
@@ -615,13 +415,9 @@
 
 
       <p class="muted">
-
-        Tus notas, tareas y preferencias se guardan
-        localmente en este navegador.
-
-        Las herramientas que consultan servicios
-        externos necesitan internet.
-
+        Tus notas, tareas y preferencias se guardan localmente
+        en este navegador. Las herramientas que consultan
+        servicios externos necesitan internet.
       </p>
 
     </section>
@@ -629,21 +425,12 @@
   </main>
 
 
-
-  <!-- =====================================================
-       PIE DE PÁGINA
-       ===================================================== -->
-
+  <!-- PIE -->
   <footer>
 
     <div>
-
-      <strong>
-        ÚtilHub
-      </strong>
-
+      <strong>ÚtilHub</strong>
       · V14 SUPRIME-MASTER-NOVA
-
     </div>
 
     <span>
@@ -653,11 +440,7 @@
   </footer>
 
 
-
-  <!-- =====================================================
-       MODAL
-       ===================================================== -->
-
+  <!-- MODAL -->
   <div
     id="modal"
     class="modal"
@@ -685,21 +468,14 @@
         ×
       </button>
 
-
-      <div
-        id="modalContent"
-      ></div>
+      <div id="modalContent"></div>
 
     </section>
 
   </div>
 
 
-
-  <!-- =====================================================
-       MENSAJES
-       ===================================================== -->
-
+  <!-- NOTIFICACIÓN -->
   <div
     id="toast"
     class="toast"
@@ -707,11 +483,6 @@
     aria-live="polite"
   ></div>
 
-
-
-  <!-- =====================================================
-       JAVASCRIPT
-       ===================================================== -->
 
   <script src="script.js"></script>
 
